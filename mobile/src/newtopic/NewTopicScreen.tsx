@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import {
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -106,7 +108,13 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        // The fixed header sits outside this view, so on iOS we pad only the scroll
+        // region by the keyboard height; Android's adjustResize handles it natively.
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {/* NAME — the only required free-text field. */}
         <View style={styles.section}>
           <Text style={styles.fieldLabel}>NAME</Text>
@@ -220,13 +228,15 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
             )}
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.paper },
+  keyboardView: { flex: 1 },
 
   header: {
     paddingTop: 56,
