@@ -12,6 +12,7 @@ export const theme = {
   ink: '#16140E', // primary text and the heavy brutalist borders
   muted: '#6E6A5E', // secondary text, un-logged labels
   rule: 'rgba(22,20,14,0.26)', // hairline dividers between rows / segments
+  hair: 'rgba(22,20,14,0.17)', // a fainter hairline than `rule` — unselected swatch borders, preview segment dividers
   empty: '#DED9CD', // the NEUTRAL grey reserved for "missing" — never a topic color
   field: '#FCFBF7',
   // Square corners are the design default (`radius: "square"` => 0px). Kept as a
