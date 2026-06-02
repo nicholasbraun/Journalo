@@ -1,74 +1,85 @@
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
 import {
   fold,
+  loggingDateFor,
   type Event,
   type EventId,
   type LoggingDate,
+  type Rank,
+  type TimeOfDay,
   type TopicId,
+  type WallClock,
 } from '@journal/core';
 
+import { QuickLogScreen } from './src/quicklog/QuickLogScreen';
+import { SEED_TOPICS } from './src/quicklog/seed';
 import { createSqliteEventStore } from './src/storage/sqliteEventStore';
 
-// THROWAWAY storage smoke. Proves the DURABLE round-trip on-device: events appended
-// through the SQLite adapter survive being read back through a fresh store instance
-// (an independent connection to the on-disk database = a simulated app restart) and
-// fold to the correct state. Delete this whole block (and the on-screen counts) when
-// the quick-log screen becomes the real logging surface — it exists only to prove
-// the seam end-to-end this session.
-//
-// Because the data persists, the seed is written only once: the first launch SEEDS,
-// every real relaunch RESTORES the same events from disk — visible proof the
-// round-trip survived process death.
-const SMOKE_EVENTS: Event[] = [
-  {
-    type: 'TopicCreated',
-    event_id: 'smoke-create-mood' as EventId,
-    ts: 1000,
-    topic_id: 'mood' as TopicId,
-    name: 'Mood',
-    color: '#4488cc',
-    scale: { levels: 5 },
-  },
-  {
-    type: 'DayValueSet',
-    event_id: 'smoke-set-mood-1' as EventId,
-    ts: 2000,
-    topic_id: 'mood' as TopicId,
-    logging_date: '2024-06-01' as LoggingDate,
-    rank: 3,
-  },
-];
+// The logging-day boundary as a hardcoded default for now. Making it a user setting
+// is a later session; this is the FIRST place the boundary drives the UI — it decides
+// which calendar day a value lands on (ARCHITECTURE.md §5, CLAUDE.md invariant 3).
+const BOUNDARY: TimeOfDay = { hour: 4, minute: 0 };
+
+// Local civil wall-clock right now, as the components loggingDateFor expects. We read
+// the device clock here (the shell's job — core stays platform-free and cannot read a
+// timezone); month/day are made 1-based to match the core's WallClock contract.
+function wallClockNow(): WallClock {
+  const d = new Date();
+  return {
+    year: d.getFullYear(),
+    month: d.getMonth() + 1,
+    day: d.getDate(),
+    hour: d.getHours(),
+    minute: d.getMinutes(),
+  };
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// Format a "YYYY-MM-DD" logging date into the header's "Tue · 02 Jun" label. Parsed as
+// a civil date (local Date), purely for display — never fed back into the domain.
+function formatDateLabel(date: LoggingDate): string {
+  const [y, m, d] = date.split('-').map(Number);
+  const wd = WEEKDAYS[new Date(y, m - 1, d).getDay()];
+  return `${wd} · ${String(d).padStart(2, '0')} ${MONTHS[m - 1]}`;
+}
+
+// Unique-per-event id without a dependency: a monotonic counter paired with the wall
+// clock. Sufficient under the single-device, single-process model — it satisfies both
+// the fold's (ts, event_id) tie-breaker and the store's UNIQUE column. (expo-crypto
+// UUIDs would be the move if events were ever generated concurrently across devices.)
+let eventSeq = 0;
+const nextEventId = (): EventId => `${Date.now()}-${eventSeq++}` as EventId;
 
 export default function App() {
-  const [summary, setSummary] = useState('running storage smoke…');
+  // The append-only log held in memory; the fold over it is the single source of
+  // truth for what the screen shows (CLAUDE.md invariant 4). `null` = still loading.
+  const [events, setEvents] = useState<Event[] | null>(null);
+  const [store, setStore] = useState<Awaited<ReturnType<typeof createSqliteEventStore>> | null>(null);
+
+  // Today's logging day, computed once on mount. Memoized so the cell lookups in the
+  // screen key off a stable value across re-renders.
+  const today = useMemo(() => loggingDateFor(wallClockNow(), BOUNDARY), []);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      // Open the store and seed only if the log is empty — so a relaunch reads
-      // what the previous launch persisted instead of re-appending.
-      const store = await createSqliteEventStore();
-      const existing = await store.read();
-      const seededThisRun = existing.length === 0;
-      if (seededThisRun) {
-        await store.append(SMOKE_EVENTS);
+      const s = await createSqliteEventStore();
+      // Seed the throwaway topics only when the log is empty, so a relaunch restores
+      // what was persisted (including any values logged last run) instead of
+      // re-seeding. Mirrors the smoke harness this replaces.
+      const existing = await s.read();
+      if (existing.length === 0) {
+        await s.append(SEED_TOPICS);
       }
-
-      // Read back through a FRESH store instance — an independent connection to the
-      // same on-disk database, standing in for an app restart — then fold.
-      const fresh = await createSqliteEventStore();
-      const reloaded = await fresh.read();
-      const state = fold(reloaded);
-      const cellCount = [...state.cells.values()].reduce((n, byDate) => n + byDate.size, 0);
+      const loaded = await s.read();
       if (!cancelled) {
-        const origin = seededThisRun ? 'seeded this run' : 'restored from disk';
-        setSummary(
-          `${origin}: folded ${state.topics.size} topic(s), ${cellCount} cell(s) ` +
-            `from ${reloaded.length} persisted event(s)`,
-        );
+        setStore(s);
+        setEvents([...loaded]);
       }
     })();
     return () => {
@@ -76,20 +87,47 @@ export default function App() {
     };
   }, []);
 
+  const state = useMemo(() => fold(events ?? []), [events]);
+
+  // Tap handler: append a DayValueSet for (topic, today, rank). We write through to
+  // the store AND append to the in-memory log, then let the fold re-derive — no DB
+  // round-trip per tap, and no parallel mutable state that could drift from the log.
+  const onSet = (topicId: TopicId, rank: Rank) => {
+    if (store === null) return;
+    const event: Event = {
+      type: 'DayValueSet',
+      event_id: nextEventId(),
+      ts: Date.now(),
+      topic_id: topicId,
+      logging_date: today,
+      rank,
+    };
+    void store.append([event]);
+    setEvents((prev) => [...(prev ?? []), event]);
+  };
+
+  if (events === null) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator />
+        <StatusBar style="dark" />
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text>Journal — scaffolding placeholder</Text>
-      <Text>storage smoke: {summary}</Text>
-      <StatusBar style="auto" />
-    </View>
+    <>
+      <QuickLogScreen
+        state={state}
+        loggingDate={today}
+        dateLabel={formatDateLabel(today)}
+        onSet={onSet}
+      />
+      <StatusBar style="dark" />
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F4F1E9' },
 });

@@ -1,0 +1,279 @@
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import {
+  activeTopics,
+  cellState,
+  type LoggingDate,
+  type Rank,
+  type State,
+  type TopicId,
+  type TopicState,
+} from '@journal/core';
+
+import { buildRamp } from './colorRamp';
+import { fonts, theme } from './theme';
+
+// The quick-log screen: one scrollable list of today's topics, each with an inline
+// value selector. The two data-semantics invariants are the whole point of this
+// screen and must hold VISUALLY:
+//   • Nothing is pre-selected — an un-logged topic shows an empty selector.
+//   • Missing is distinct from set — un-logged topics read as visibly open, so the
+//     user can see at a glance which topics still need logging today.
+// Folded `state` is the single source of truth (CLAUDE.md invariant 4); this screen
+// only renders it and reports taps upward via `onSet`.
+
+type Props = {
+  readonly state: State;
+  // Today's logging day, computed once by the shell via loggingDateFor (the boundary
+  // setting driving the UI). Every cell lookup is keyed on this date.
+  readonly loggingDate: LoggingDate;
+  // Human label for the header sub-line, e.g. "Tue · 02 Jun".
+  readonly dateLabel: string;
+  // Append a value for (topic, today, rank). Re-tapping a different segment is just a
+  // later set; there is no un-set (consistent with the domain — no clear event).
+  readonly onSet: (topicId: TopicId, rank: Rank) => void;
+};
+
+// The inline segmented selector for one topic: one tappable segment per scale level.
+// A segment is filled with the topic's intensity color ONLY when its rank is the
+// logged value; when the cell is absent, `selectedRank` is null and NO segment is
+// filled — the empty-selector invariant, rendered.
+function ValueSelector({
+  topic,
+  selectedRank,
+  onSet,
+}: {
+  topic: TopicState;
+  selectedRank: Rank | null;
+  onSet: (topicId: TopicId, rank: Rank) => void;
+}) {
+  const ramp = buildRamp(topic.color, topic.scale.levels);
+  // Labels are display-only; fall back to the rank number when a topic has none.
+  const labelFor = (rank: number): string =>
+    topic.scale.labels?.[rank] ?? String(rank + 1);
+
+  return (
+    <View style={styles.selector}>
+      {Array.from({ length: topic.scale.levels }, (_, rank) => {
+        const selected = selectedRank === rank;
+        return (
+          <Pressable
+            key={rank}
+            onPress={() => onSet(topic.id, rank)}
+            // Internal hairline divider (not in the handoff) so the segments read as
+            // distinct tap targets even when the whole selector is empty.
+            style={[
+              styles.segment,
+              rank > 0 && styles.segmentDivider,
+              selected && { backgroundColor: ramp.fill(rank) },
+            ]}
+          >
+            <Text
+              numberOfLines={2}
+              style={[
+                styles.segmentLabel,
+                selected
+                  ? { color: ramp.textOn(rank), fontWeight: '700' }
+                  : { color: theme.muted, fontWeight: '500' },
+              ]}
+            >
+              {labelFor(rank)}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function QuickLogRow({
+  topic,
+  selectedRank,
+  onSet,
+}: {
+  topic: TopicState;
+  selectedRank: Rank | null;
+  onSet: (topicId: TopicId, rank: Rank) => void;
+}) {
+  const ramp = buildRamp(topic.color, topic.scale.levels);
+  const logged = selectedRank !== null;
+  return (
+    <View style={styles.row}>
+      <View style={styles.rowHeader}>
+        <View style={styles.rowHeaderLeft}>
+          <View style={[styles.swatch, { backgroundColor: ramp.swatch }]} />
+          <Text style={styles.topicName}>{topic.name}</Text>
+        </View>
+        {/* Per-row status cue (an addition to the handoff): the muted "not logged"
+            tag makes the still-open topics scannable down a long list. A logged row
+            carries no tag — its filled segment already speaks. */}
+        {!logged && <Text style={styles.statusTag}>not logged</Text>}
+      </View>
+      <ValueSelector topic={topic} selectedRank={selectedRank} onSet={onSet} />
+    </View>
+  );
+}
+
+export function QuickLogScreen({ state, loggingDate, dateLabel, onSet }: Props) {
+  const topics = activeTopics(state);
+
+  // Per topic, today's value or null-if-absent. The switch on `kind` is what keeps
+  // missing from decaying into rank 0 (CLAUDE.md invariant 1): an absent cell yields
+  // null, never a rank.
+  const selectedRankOf = (topicId: TopicId): Rank | null => {
+    const cell = cellState(state, topicId, loggingDate);
+    return cell.kind === 'set' ? cell.rank : null;
+  };
+
+  const done = topics.filter((t) => selectedRankOf(t.id) !== null).length;
+  const total = topics.length;
+  const complete = total > 0 && done === total;
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <View style={styles.headerMain}>
+          <Text style={styles.kicker}>QUICK LOG</Text>
+          <Text style={styles.title}>Today</Text>
+          <Text style={styles.sub}>{dateLabel} · day boundary 04:00</Text>
+        </View>
+        <View style={styles.counter}>
+          <Text style={styles.counterValue}>
+            {done}
+            <Text style={styles.counterTotal}>/{total}</Text>
+          </Text>
+          <Text style={styles.counterLabel}>{complete ? 'COMPLETE' : 'LOGGED'}</Text>
+        </View>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollBody}>
+        {topics.map((t) => (
+          <QuickLogRow
+            key={t.id}
+            topic={t}
+            selectedRank={selectedRankOf(t.id)}
+            onSet={onSet}
+          />
+        ))}
+        <Text style={styles.footnote}>
+          {complete
+            ? 'All topics logged for today. Re-tap any value to change it.'
+            : `${total - done} topic${total - done === 1 ? '' : 's'} still open. ` +
+              'Tap one value per topic — nothing is pre-selected.'}
+        </Text>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.paper },
+
+  // 56px top clears the iOS notch/status bar without pulling in a safe-area dependency
+  // (RN's SafeAreaView is deprecated); matches the handoff's header padding.
+  header: {
+    paddingTop: 56,
+    paddingHorizontal: 18,
+    paddingBottom: 14,
+    borderBottomWidth: 1.5,
+    borderBottomColor: theme.rule,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  headerMain: { flexShrink: 1 },
+  kicker: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    color: theme.muted,
+    marginBottom: 7,
+  },
+  title: {
+    fontFamily: fonts.sans,
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.8,
+    color: theme.ink,
+  },
+  sub: { fontFamily: fonts.mono, fontSize: 12, color: theme.muted, marginTop: 8 },
+  counter: { alignItems: 'flex-end', flexShrink: 0 },
+  counterValue: {
+    fontFamily: fonts.mono,
+    fontSize: 22,
+    fontWeight: '700',
+    color: theme.ink,
+  },
+  counterTotal: { color: theme.muted },
+  counterLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 9,
+    letterSpacing: 1.3,
+    color: theme.muted,
+    marginTop: 5,
+  },
+
+  scrollBody: { paddingHorizontal: 18, paddingBottom: 120 },
+
+  row: { paddingTop: 18, paddingBottom: 22, borderBottomWidth: 1.5, borderBottomColor: theme.rule },
+  rowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 11,
+  },
+  rowHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
+  swatch: {
+    width: 14,
+    height: 14,
+    borderWidth: 1.5,
+    borderColor: theme.ink,
+    borderRadius: theme.radius,
+  },
+  topicName: {
+    fontFamily: fonts.sans,
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: -0.2,
+    color: theme.ink,
+  },
+  statusTag: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    color: theme.muted,
+    flexShrink: 0,
+  },
+
+  selector: {
+    flexDirection: 'row',
+    borderWidth: 2.5,
+    borderColor: theme.ink,
+    borderRadius: theme.radius,
+    overflow: 'hidden',
+  },
+  segment: {
+    flex: 1,
+    minHeight: 54,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentDivider: { borderLeftWidth: 1.5, borderLeftColor: theme.rule },
+  segmentLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 10.5,
+    lineHeight: 12,
+    letterSpacing: -0.1,
+    textAlign: 'center',
+  },
+
+  footnote: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    color: theme.muted,
+    marginTop: 18,
+    lineHeight: 18,
+  },
+});
