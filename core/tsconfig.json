@@ -1,0 +1,27 @@
+{
+  // Strict, platform-agnostic config for @journal/core.
+  // `lib` deliberately excludes "DOM": this turns any use of browser/platform
+  // globals (window, document, fetch, localStorage, ...) into a compile error,
+  // enforcing the ARCHITECTURE.md invariant that core has no platform deps.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "types": [],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+
+    "noEmit": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"]
+}
