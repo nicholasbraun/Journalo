@@ -32,6 +32,9 @@ type Props = {
   // Append a value for (topic, today, rank). Re-tapping a different segment is just a
   // later set; there is no un-set (consistent with the domain — no clear event).
   readonly onSet: (topicId: TopicId, rank: Rank) => void;
+  // Open the New Topic screen. Reachable from the empty state (when there are no
+  // topics yet) and from a standing affordance once topics exist.
+  readonly onNewTopic: () => void;
 };
 
 // The inline segmented selector for one topic: one tappable segment per scale level.
@@ -114,7 +117,7 @@ function QuickLogRow({
   );
 }
 
-export function QuickLogScreen({ state, loggingDate, dateLabel, onSet }: Props) {
+export function QuickLogScreen({ state, loggingDate, dateLabel, onSet, onNewTopic }: Props) {
   const topics = activeTopics(state);
 
   // Per topic, today's value or null-if-absent. The switch on `kind` is what keeps
@@ -128,6 +131,7 @@ export function QuickLogScreen({ state, loggingDate, dateLabel, onSet }: Props) 
   const done = topics.filter((t) => selectedRankOf(t.id) !== null).length;
   const total = topics.length;
   const complete = total > 0 && done === total;
+  const isEmpty = total === 0;
 
   return (
     <View style={styles.container}>
@@ -137,30 +141,49 @@ export function QuickLogScreen({ state, loggingDate, dateLabel, onSet }: Props) 
           <Text style={styles.title}>Today</Text>
           <Text style={styles.sub}>{dateLabel} · day boundary 04:00</Text>
         </View>
-        <View style={styles.counter}>
-          <Text style={styles.counterValue}>
-            {done}
-            <Text style={styles.counterTotal}>/{total}</Text>
-          </Text>
-          <Text style={styles.counterLabel}>{complete ? 'COMPLETE' : 'LOGGED'}</Text>
-        </View>
+        {/* The progress counter only makes sense once there is something to count;
+            an empty journal shows the create-your-first-topic state instead. */}
+        {!isEmpty && (
+          <View style={styles.counter}>
+            <Text style={styles.counterValue}>
+              {done}
+              <Text style={styles.counterTotal}>/{total}</Text>
+            </Text>
+            <Text style={styles.counterLabel}>{complete ? 'COMPLETE' : 'LOGGED'}</Text>
+          </View>
+        )}
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollBody}>
-        {topics.map((t) => (
-          <QuickLogRow
-            key={t.id}
-            topic={t}
-            selectedRank={selectedRankOf(t.id)}
-            onSet={onSet}
-          />
-        ))}
-        <Text style={styles.footnote}>
-          {complete
-            ? 'All topics logged for today. Re-tap any value to change it.'
-            : `${total - done} topic${total - done === 1 ? '' : 's'} still open. ` +
-              'Tap one value per topic — nothing is pre-selected.'}
-        </Text>
+        {isEmpty ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>No topics yet</Text>
+            <Text style={styles.emptyBody}>Create one to start logging your day.</Text>
+            <Pressable onPress={onNewTopic} accessibilityRole="button" style={styles.newTopicSolid}>
+              <Text style={styles.newTopicSolidLabel}>+  New topic</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <>
+            {topics.map((t) => (
+              <QuickLogRow
+                key={t.id}
+                topic={t}
+                selectedRank={selectedRankOf(t.id)}
+                onSet={onSet}
+              />
+            ))}
+            <Text style={styles.footnote}>
+              {complete
+                ? 'All topics logged for today. Re-tap any value to change it.'
+                : `${total - done} topic${total - done === 1 ? '' : 's'} still open. ` +
+                  'Tap one value per topic — nothing is pre-selected.'}
+            </Text>
+            <Pressable onPress={onNewTopic} accessibilityRole="button" style={styles.newTopicOutline}>
+              <Text style={styles.newTopicOutlineLabel}>+  New topic</Text>
+            </Pressable>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -275,5 +298,58 @@ const styles = StyleSheet.create({
     color: theme.muted,
     marginTop: 18,
     lineHeight: 18,
+  },
+
+  // Empty state: shown when the journal has no topics. Sits in the scroll body in
+  // place of the row list, with a primary action straight to topic creation.
+  empty: { paddingTop: 64, alignItems: 'center' },
+  emptyTitle: {
+    fontFamily: fonts.sans,
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.4,
+    color: theme.ink,
+    marginBottom: 8,
+  },
+  emptyBody: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    color: theme.muted,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+
+  // Primary (solid) create button for the empty state.
+  newTopicSolid: {
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    backgroundColor: theme.ink,
+    borderWidth: 1.5,
+    borderColor: theme.ink,
+    borderRadius: theme.radius,
+  },
+  newTopicSolidLabel: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    color: theme.paper,
+  },
+
+  // Secondary (outline) create button standing below the list once topics exist.
+  newTopicOutline: {
+    marginTop: 22,
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderColor: theme.ink,
+    borderRadius: theme.radius,
+    alignItems: 'center',
+  },
+  newTopicOutlineLabel: {
+    fontFamily: fonts.sans,
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+    color: theme.ink,
   },
 });

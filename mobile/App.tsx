@@ -9,13 +9,14 @@ import {
   type EventId,
   type LoggingDate,
   type Rank,
+  type Scale,
   type TimeOfDay,
   type TopicId,
   type WallClock,
 } from '@journal/core';
 
+import { NewTopicScreen } from './src/newtopic/NewTopicScreen';
 import { QuickLogScreen } from './src/quicklog/QuickLogScreen';
-import { SEED_TOPICS } from './src/quicklog/seed';
 import { createSqliteEventStore } from './src/storage/sqliteEventStore';
 
 // The logging-day boundary as a hardcoded default for now. Making it a user setting
@@ -55,11 +56,22 @@ function formatDateLabel(date: LoggingDate): string {
 let eventSeq = 0;
 const nextEventId = (): EventId => `${Date.now()}-${eventSeq++}` as EventId;
 
+// Topic ids follow the same single-process, monotonic scheme as event ids: they only
+// need to be unique within this device's log. Prefixed so they read distinctly from
+// event ids in the stored JSON.
+let topicSeq = 0;
+const nextTopicId = (): TopicId => `topic-${Date.now()}-${topicSeq++}` as TopicId;
+
 export default function App() {
   // The append-only log held in memory; the fold over it is the single source of
   // truth for what the screen shows (CLAUDE.md invariant 4). `null` = still loading.
   const [events, setEvents] = useState<Event[] | null>(null);
   const [store, setStore] = useState<Awaited<ReturnType<typeof createSqliteEventStore>> | null>(null);
+
+  // Which screen is showing. The app has two screens this session and no routing
+  // need beyond this toggle, so a single piece of state stands in for navigation
+  // (a real router waits until the year-grid/overlay/settings screens arrive).
+  const [screen, setScreen] = useState<'quicklog' | 'newTopic'>('quicklog');
 
   // Today's logging day, computed once on mount. Memoized so the cell lookups in the
   // screen key off a stable value across re-renders.
@@ -69,13 +81,9 @@ export default function App() {
     let cancelled = false;
     (async () => {
       const s = await createSqliteEventStore();
-      // Seed the throwaway topics only when the log is empty, so a relaunch restores
-      // what was persisted (including any values logged last run) instead of
-      // re-seeding. Mirrors the smoke harness this replaces.
-      const existing = await s.read();
-      if (existing.length === 0) {
-        await s.append(SEED_TOPICS);
-      }
+      // The app starts empty: a fresh install has no topics until the user creates
+      // one (the empty state on the quick-log screen points them there). The log is
+      // the persisted source of truth, so a relaunch restores exactly what was saved.
       const loaded = await s.read();
       if (!cancelled) {
         setStore(s);
@@ -106,6 +114,25 @@ export default function App() {
     setEvents((prev) => [...(prev ?? []), event]);
   };
 
+  // Create a topic: append a TopicCreated and return to the quick-log screen. Same
+  // write-through-then-refold path as onSet (the fold re-derives; no parallel state),
+  // with the shell minting the ids and timestamp the screen shouldn't have to know.
+  const onCreateTopic = (input: { name: string; color: string; scale: Scale }) => {
+    if (store === null) return;
+    const event: Event = {
+      type: 'TopicCreated',
+      event_id: nextEventId(),
+      ts: Date.now(),
+      topic_id: nextTopicId(),
+      name: input.name,
+      color: input.color,
+      scale: input.scale,
+    };
+    void store.append([event]);
+    setEvents((prev) => [...(prev ?? []), event]);
+    setScreen('quicklog');
+  };
+
   if (events === null) {
     return (
       <View style={styles.loading}>
@@ -117,12 +144,17 @@ export default function App() {
 
   return (
     <>
-      <QuickLogScreen
-        state={state}
-        loggingDate={today}
-        dateLabel={formatDateLabel(today)}
-        onSet={onSet}
-      />
+      {screen === 'newTopic' ? (
+        <NewTopicScreen onCreate={onCreateTopic} onCancel={() => setScreen('quicklog')} />
+      ) : (
+        <QuickLogScreen
+          state={state}
+          loggingDate={today}
+          dateLabel={formatDateLabel(today)}
+          onSet={onSet}
+          onNewTopic={() => setScreen('newTopic')}
+        />
+      )}
       <StatusBar style="dark" />
     </>
   );
