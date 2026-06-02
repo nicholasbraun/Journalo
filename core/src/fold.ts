@@ -25,6 +25,12 @@ export type TopicState = {
 // day (`{kind:"absent"}`, which has no rank to read). This is the type-level form
 // of CLAUDE.md invariant 1: missing is not zero. Callers must narrow on `kind`
 // before touching a rank, so absence cannot silently decay into 0.
+//
+// "absent" is a strictly-initial state: every cell begins absent and, once any
+// DayValueSet lands, is set permanently. Its rank can still change (a later
+// DayValueSet wins), but it never returns to absent — there is no clear event.
+// Absent and rank 0 remain structurally distinct regardless (invariant 1); this
+// only narrows when absent is reachable, never whether it is distinct from 0.
 export type CellState =
   | { readonly kind: "set"; readonly rank: Rank }
   | { readonly kind: "absent" };
@@ -73,10 +79,10 @@ type TopicAcc = {
   deleted: boolean;
 };
 
-// Working accumulator for one cell: the latest-wins event for that (topic, day).
-type CellAcc =
-  | { kind: "set"; rank: Rank; ts: number; id: EventId }
-  | { kind: "clear"; ts: number; id: EventId };
+// Working accumulator for one cell: the latest-wins DayValueSet for that
+// (topic, day). There is only one observation event, so a cell that has any
+// accumulator is necessarily set — the (ts, event_id)-max picks the winning rank.
+type CellAcc = { rank: Rank; ts: number; id: EventId };
 
 // Reduce an append-only event log into materialized state. The fold is the single
 // source of truth (CLAUDE.md invariant 4): there is no parallel mutable state.
@@ -126,8 +132,7 @@ export function fold(events: readonly Event[]): State {
         topicAcc(e.topic_id).deleted = true;
         break;
       }
-      case "DayValueSet":
-      case "DayValueClear": {
+      case "DayValueSet": {
         let byDate = cells.get(e.topic_id);
         if (byDate === undefined) {
           byDate = new Map<LoggingDate, CellAcc>();
@@ -138,12 +143,7 @@ export function fold(events: readonly Event[]): State {
         // already-recorded cells.
         const cur = byDate.get(e.logging_date);
         if (cur === undefined || isAfter(e.ts, e.event_id, cur.ts, cur.id)) {
-          byDate.set(
-            e.logging_date,
-            e.type === "DayValueSet"
-              ? { kind: "set", rank: e.rank, ts: e.ts, id: e.event_id }
-              : { kind: "clear", ts: e.ts, id: e.event_id },
-          );
+          byDate.set(e.logging_date, { rank: e.rank, ts: e.ts, id: e.event_id });
         }
         break;
       }
@@ -168,14 +168,15 @@ export function fold(events: readonly Event[]): State {
     });
   }
 
-  // Finalize cells: a winning Set becomes a rank entry; a winning Clear leaves no
-  // entry at all (absent). Cells are kept regardless of whether the topic exists,
-  // so no observation is ever dropped.
+  // Finalize cells: each accumulated cell is a logged value, so it becomes a rank
+  // entry (absent cells were never recorded and so have no accumulator at all).
+  // Cells are kept regardless of whether the topic exists, so no observation is
+  // ever dropped.
   const outCells = new Map<TopicId, ReadonlyMap<LoggingDate, Rank>>();
   for (const [id, byDate] of cells) {
     const ranks = new Map<LoggingDate, Rank>();
     for (const [date, cell] of byDate) {
-      if (cell.kind === "set") ranks.set(date, cell.rank);
+      ranks.set(date, cell.rank);
     }
     if (ranks.size > 0) outCells.set(id, ranks);
   }

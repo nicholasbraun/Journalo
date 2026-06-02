@@ -5,8 +5,8 @@ import type { Event } from "./events.js";
 // event log folded into state (CLAUDE.md invariant 4), so the only operations that
 // exist are "add events to the end of the log" and "read the whole log to fold on
 // startup". There is intentionally NO update, delete, or query — those imply
-// mutating the log, which the model forbids; an edit or an undo is itself a new
-// appended event (DayValueSet / DayValueClear), not a mutation of a past one.
+// mutating the log, which the model forbids; an edit is itself a new appended
+// event (a later DayValueSet for the same key), not a mutation of a past one.
 //
 // Async because every realistic adapter (SQLite, AsyncStorage, a file) is async;
 // keeping the port async lets the real engine drop in behind it with no signature

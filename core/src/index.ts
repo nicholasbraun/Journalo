@@ -8,7 +8,6 @@ export type {
   TopicEdited,
   TopicDeleted,
   DayValueSet,
-  DayValueClear,
   TopicId,
   EventId,
   LoggingDate,

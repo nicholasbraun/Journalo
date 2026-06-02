@@ -1,6 +1,6 @@
 // Event types for the journal domain: the append-only log that the fold reduces
 // into UI state. See ARCHITECTURE.md §4. State is never mutated in place — every
-// change (create, edit, log, clear, delete) is a new event appended to the log.
+// change (create, edit, log, delete) is a new event appended to the log.
 
 // Branded string aliases. These are plain strings at runtime; the brand exists
 // only so the type system refuses to mix, say, a TopicId where a LoggingDate is
@@ -71,11 +71,19 @@ export type TopicDeleted = EventBase & {
   readonly topic_id: TopicId;
 };
 
-// --- Observation events: record (or unrecord) a day's value. ---
+// --- Observation events: record a day's value. ---
 
 // Keyed by (topic_id, logging_date). `logging_date` is computed once at log time
 // by `loggingDateFor` and frozen into the event (CLAUDE.md invariant 3); the fold
 // reads it verbatim and never re-derives it from `ts`.
+//
+// This is the only observation event: there is deliberately no "clear" event.
+// A correction is just a later DayValueSet for the same key, so a cell can move
+// between ranks but never returns to absent. A topic's scale is meant to provide
+// a rank for every state the user could be in, so a mis-tap is fixed by setting
+// a different rank, not by un-logging. Note this does NOT collapse absent into
+// rank 0 (CLAUDE.md invariant 1): absent remains a distinct, strictly-initial
+// state — see CellState in fold.ts.
 export type DayValueSet = EventBase & {
   readonly type: "DayValueSet";
   readonly topic_id: TopicId;
@@ -83,18 +91,8 @@ export type DayValueSet = EventBase & {
   readonly rank: Rank;
 };
 
-// Returns a cell to the absent state — distinct from setting rank 0 (CLAUDE.md
-// invariant 1). Used to undo a logged value rather than mutating/deleting the
-// original DayValueSet.
-export type DayValueClear = EventBase & {
-  readonly type: "DayValueClear";
-  readonly topic_id: TopicId;
-  readonly logging_date: LoggingDate;
-};
-
 export type Event =
   | TopicCreated
   | TopicEdited
   | TopicDeleted
-  | DayValueSet
-  | DayValueClear;
+  | DayValueSet;

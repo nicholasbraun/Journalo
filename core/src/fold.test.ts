@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { activeTopics, cellState, fold } from "./fold.js";
 import type {
-  DayValueClear,
   DayValueSet,
   EventId,
   Event,
@@ -69,19 +68,6 @@ const setv = (
   rank,
 });
 
-const clearv = (
-  topic: string,
-  date: string,
-  ts: number,
-  event_id?: string,
-): DayValueClear => ({
-  type: "DayValueClear",
-  event_id: (event_id ?? `x-${topic}-${date}-${ts}`) as EventId,
-  ts,
-  topic_id: tid(topic),
-  logging_date: ld(date),
-});
-
 describe("fold", () => {
   it("returns empty state for an empty log", () => {
     const s = fold([]);
@@ -133,24 +119,6 @@ describe("fold", () => {
     expect(cellState(s, tid("ibs"), ld("2024-06-15"))).toEqual({ kind: "set", rank: 4 });
   });
 
-  // Invariant 1 again, via clear: returning to missing must not become rank 0.
-  it("clears a cell back to absent (distinct from rank 0)", () => {
-    const laterClear = fold([
-      create("ibs", 1),
-      setv("ibs", "2024-06-15", 3, 10),
-      clearv("ibs", "2024-06-15", 20),
-    ]);
-    expect(cellState(laterClear, tid("ibs"), ld("2024-06-15"))).toEqual({ kind: "absent" });
-
-    const reSet = fold([
-      create("ibs", 1),
-      setv("ibs", "2024-06-15", 3, 10),
-      clearv("ibs", "2024-06-15", 20),
-      setv("ibs", "2024-06-15", 2, 30), // re-logging after a clear wins again
-    ]);
-    expect(cellState(reSet, tid("ibs"), ld("2024-06-15"))).toEqual({ kind: "set", rank: 2 });
-  });
-
   // The tiebreaker: equal ts is resolved by event_id, regardless of array order.
   it("breaks equal-ts ties by event_id deterministically", () => {
     const lowId = setv("ibs", "2024-06-15", 1, 100, "aaa");
@@ -172,7 +140,6 @@ describe("fold", () => {
       edit("mood", 9, { color: "#999" }),
       setv("mood", "2024-06-15", 2, 10),
       setv("mood", "2024-06-15", 3, 20),
-      clearv("ibs", "2024-06-16", 30),
       setv("ibs", "2024-06-16", 1, 25),
       del("ibs", 40),
       // an equal-ts pair to force the tiebreaker under reordering
