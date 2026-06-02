@@ -149,6 +149,7 @@ Conventional Commits: `type: description` (lowercase, imperative).
 Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`. Scoped variants
 allowed: `feat(core): add loggingDateFor`. Atomic commits — one logical change
 each. The two-commit pattern for bug fixes (failing test, then fix) is the norm.
+This is a git repo. Commit work in atomic Conventional Commits, don't ask whether to init.
 
 ## Session Discipline
 
