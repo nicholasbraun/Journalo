@@ -180,13 +180,33 @@ No free tier, no in-app unlock, no entitlement check: payment is acquisition.
 Because there is no server and sync is out of scope, none of the earlier
 cross-platform-entitlement complexity applies.
 
-## 8. To Verify (don't trust a stale snapshot)
+## 8. Local Store (decided)
 
-- **React Native local store** choice (e.g. SQLite via a maintained RN binding)
-  and confirmation that its data sits in the **platform-backed-up** location, so
-  §6 holds.
-- These touch fast-moving platform/library details — verify against current docs
-  at build time.
+**Engine: `expo-sqlite`** — the maintained first-party SQLite binding for Expo
+SDK 56, New-Architecture compatible (the New Architecture is mandatory and the
+default from SDK 55 on, and all `expo-*` packages support it). It backs the core
+`EventStore` port from the `mobile` shell; the append-only log is stored as one
+JSON row per event and read back in append order via a monotonic sequence column.
+
+**Backup-safe placement (§6 holds):** the database is opened with no `directory`
+override, so it lives in expo-sqlite's default — the **application documents
+directory**. That directory is included in **iCloud backup / device transfer on
+iOS** (`NSDocumentDirectory`; files are excluded only via `isExcludedFromBackup`,
+which we do not set) and in **Android Auto Backup** (which covers `getFilesDir()` /
+`getDatabasePath()`). So a new phone restores the journal through platform backup
+with no extra work. Choosing a cache or shared-container directory would silently
+break this, so the default is kept deliberately.
+
+Verified against the versioned SDK 56 docs at build time, not memory:
+
+- expo-sqlite (SDK 56): <https://docs.expo.dev/versions/v56.0.0/sdk/sqlite/>
+- New Architecture (mandatory since SDK 55): <https://docs.expo.dev/guides/new-architecture/>
+- iOS backup default (Documents backed up unless excluded) and Android Auto Backup
+  coverage of `getFilesDir()`/`getDatabasePath()`:
+  <https://developer.android.com/identity/data/autobackup>
+
+> Re-verify against current docs if the SDK is upgraded — these touch fast-moving
+> platform/library details.
 
 ## 9. Door Left Open
 
