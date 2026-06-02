@@ -10,8 +10,8 @@ import {
   type TopicState,
 } from '@journal/core';
 
-import { buildRamp } from './colorRamp';
-import { fonts, theme } from './theme';
+import { buildRamp } from '../ui/colorRamp';
+import { fonts, theme } from '../ui/theme';
 
 // The quick-log screen: one scrollable list of today's topics, each with an inline
 // value selector. The two data-semantics invariants are the whole point of this
