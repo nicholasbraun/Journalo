@@ -29,6 +29,9 @@ type Props = {
   readonly loggingDate: LoggingDate;
   // Human label for the header sub-line, e.g. "Tue · 02 Jun".
   readonly dateLabel: string;
+  // The current logging-day boundary as "HH:MM", shown in the header so the cue reflects the
+  // user's setting rather than a stale literal.
+  readonly boundaryLabel: string;
   // Append a value for (topic, today, rank). Re-tapping a different segment is just a
   // later set; there is no un-set (consistent with the domain — no clear event).
   readonly onSet: (topicId: TopicId, rank: Rank) => void;
@@ -117,7 +120,7 @@ function QuickLogRow({
   );
 }
 
-export function QuickLogScreen({ state, loggingDate, dateLabel, onSet, onNewTopic }: Props) {
+export function QuickLogScreen({ state, loggingDate, dateLabel, boundaryLabel, onSet, onNewTopic }: Props) {
   const topics = activeTopics(state);
 
   // Per topic, today's value or null-if-absent. The switch on `kind` is what keeps
@@ -139,7 +142,7 @@ export function QuickLogScreen({ state, loggingDate, dateLabel, onSet, onNewTopi
         <View style={styles.headerMain}>
           <Text style={styles.kicker}>QUICK LOG</Text>
           <Text style={styles.title}>Today</Text>
-          <Text style={styles.sub}>{dateLabel} · day boundary 04:00</Text>
+          <Text style={styles.sub}>{dateLabel} · day boundary {boundaryLabel}</Text>
         </View>
         {/* The progress counter only makes sense once there is something to count;
             an empty journal shows the create-your-first-topic state instead. */}

@@ -10,12 +10,12 @@ import {
   type Rank,
   type Scale,
   type State,
-  type TimeOfDay,
   type TopicId,
   type WallClock,
 } from '@journal/core';
 
 import { theme } from '../ui/theme';
+import { useSettings } from '../settings/SettingsProvider';
 import { createSqliteEventStore } from '../storage/sqliteEventStore';
 
 // Owns the app's journal state and exposes it to every route. Under Expo Router there
@@ -25,11 +25,6 @@ import { createSqliteEventStore } from '../storage/sqliteEventStore';
 // truth (CLAUDE.md invariant 4) — relocating it from a screen's state to a context
 // changes where it lives, not how it works: handlers still write through to the store
 // and append-then-refold, with no parallel mutable state that could drift from the log.
-
-// The logging-day boundary as a hardcoded default for now. Making it a user setting is a
-// later session; this is the place the boundary drives the UI — it decides which calendar
-// day a value lands on (ARCHITECTURE.md §5, CLAUDE.md invariant 3).
-const BOUNDARY: TimeOfDay = { hour: 4, minute: 0 };
 
 // Local civil wall-clock right now, as the components loggingDateFor expects. We read the
 // device clock here (the shell's job — core stays platform-free and cannot read a
@@ -99,9 +94,16 @@ export function JournalProvider({ children }: { children: ReactNode }) {
   const [events, setEvents] = useState<Event[] | null>(null);
   const [store, setStore] = useState<Awaited<ReturnType<typeof createSqliteEventStore>> | null>(null);
 
-  // Today's logging day, computed once on mount. Memoized so cell lookups in the screens key
-  // off a stable value across re-renders.
-  const today = useMemo(() => loggingDateFor(wallClockNow(), BOUNDARY), []);
+  // The user's logging-day boundary. This is the one place the boundary feeds the domain: it
+  // decides which calendar day a value lands on (ARCHITECTURE.md §5, CLAUDE.md invariant 3).
+  const { boundary } = useSettings();
+
+  // Today's logging day under the current boundary. Recomputed when the boundary changes so
+  // the "today" new values are stamped with tracks the live setting — this is the *future*
+  // half of freeze semantics. The *past* half needs nothing here: each stored event keeps its
+  // own frozen logging_date, and the fold reads that, never recomputing from the boundary, so
+  // changing this value never moves a value already recorded.
+  const today = useMemo(() => loggingDateFor(wallClockNow(), boundary), [boundary]);
 
   useEffect(() => {
     let cancelled = false;

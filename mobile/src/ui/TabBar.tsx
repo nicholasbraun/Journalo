@@ -21,20 +21,36 @@ const HOME_INDICATOR_INSET = 24;
 
 // Per-route label + icon. Keyed by the route file name under app/(tabs)/ ("index" = Today).
 // Routes absent from this map are not rendered — the placeholder for future tabs to opt in.
-const TABS: Record<string, { label: string; icon: 'today' | 'year' }> = {
+type TabIconName = 'today' | 'year' | 'settings';
+
+const TABS: Record<string, { label: string; icon: TabIconName }> = {
   index: { label: 'Today', icon: 'today' },
   year: { label: 'Year', icon: 'year' },
+  settings: { label: 'Settings', icon: 'settings' },
 };
 
 // The handoff icons are pure geometry, so they render as bordered Views — no SVG dependency
 // (same fidelity-for-zero-dependency trade as the fonts in theme.ts). `color` follows the
 // tab's active/inactive ink so the glyph inverts on the filled active tab.
-function TabIcon({ icon, color }: { icon: 'today' | 'year'; color: string }) {
+function TabIcon({ icon, color }: { icon: TabIconName; color: string }) {
   if (icon === 'today') {
     // A bordered square with a check — the "logged today" motif.
     return (
       <View style={[styles.iconBox, { borderColor: color }]}>
         <Text style={[styles.checkGlyph, { color }]}>✓</Text>
+      </View>
+    );
+  }
+  if (icon === 'settings') {
+    // The handoff's "two sliders" glyph: two horizontal rails, each with a small square
+    // knob — rendered as Views (no SVG dependency), like the year-grid icon below. No outer
+    // box; the rails alone read as sliders within the tab's icon slot.
+    return (
+      <View style={styles.sliderBox}>
+        <View style={[styles.sliderRail, { top: '32%', backgroundColor: color }]} />
+        <View style={[styles.sliderKnob, { top: '20%', right: '14%', borderColor: color }]} />
+        <View style={[styles.sliderRail, { top: '68%', backgroundColor: color }]} />
+        <View style={[styles.sliderKnob, { top: '56%', left: '14%', borderColor: color }]} />
       </View>
     );
   }
@@ -123,4 +139,9 @@ const styles = StyleSheet.create({
   // Absolutely-positioned hairlines partition the icon box into thirds.
   gridLineV: { position: 'absolute', top: 0, bottom: 0, width: 1.5 },
   gridLineH: { position: 'absolute', left: 0, right: 0, height: 1.5 },
+
+  // Sliders icon: same 22×22 footprint as iconBox but borderless, holding two rails + knobs.
+  sliderBox: { width: 22, height: 22 },
+  sliderRail: { position: 'absolute', left: 0, right: 0, height: 1.6 },
+  sliderKnob: { position: 'absolute', width: 7, height: 7, borderWidth: 1.6 },
 });

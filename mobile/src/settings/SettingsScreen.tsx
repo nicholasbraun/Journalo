@@ -1,0 +1,271 @@
+import { type ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+
+import type { TimeOfDay } from '@journal/core';
+
+import { fonts, theme } from '../ui/theme';
+import { formatHm12, fromMinutes, toMinutes } from '../ui/time';
+
+// The Settings screen, transcribed from the design handoff (screen_settings.jsx): a minimal,
+// scrollable list of three sections — Reminder, Logging, Data. Pure presentation: it receives
+// every value and callback as props and reads no context itself (the route wires it to
+// SettingsProvider + the journal), so the data-vs-display distinction stays in the providers.
+
+type Props = {
+  readonly reminderEnabled: boolean;
+  readonly reminderTime: TimeOfDay;
+  readonly boundary: TimeOfDay;
+  readonly topicCount: number;
+  readonly onReminderEnabledChange: (enabled: boolean) => void;
+  readonly onReminderTimeChange: (time: TimeOfDay) => void;
+  readonly onBoundaryChange: (boundary: TimeOfDay) => void;
+};
+
+// A muted mono caption introducing each section.
+function SectionLabel({ children, style }: { children: ReactNode; style?: object }) {
+  return <Text style={[styles.sectionLabel, style]}>{children}</Text>;
+}
+
+// A labeled row: caption on the left, control on the right, with a hairline beneath unless
+// it is the last row in its section.
+function FieldRow({
+  label,
+  children,
+  last = false,
+}: {
+  label: string;
+  children: ReactNode;
+  last?: boolean;
+}) {
+  return (
+    <View style={[styles.fieldRow, last && styles.fieldRowLast]}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={styles.fieldControl}>{children}</View>
+    </View>
+  );
+}
+
+// The on/off switch. A bordered track that fills with ink when on; the knob sits left when
+// off and right when on. No sliding animation — the position swap reads clearly on its own.
+function Toggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <Pressable
+      onPress={() => onChange(!on)}
+      accessibilityRole="switch"
+      accessibilityState={{ checked: on }}
+      style={[styles.toggleTrack, on && styles.toggleTrackOn]}
+    >
+      <View
+        style={[
+          styles.toggleKnob,
+          on ? styles.toggleKnobOn : styles.toggleKnobOff,
+        ]}
+      />
+    </Pressable>
+  );
+}
+
+// A −/value/+ stepper over a time-of-day. Steps in `step`-minute increments and wraps at
+// midnight in both directions (via fromMinutes), so there is no invalid state to guard.
+function TimeStepper({
+  value,
+  onChange,
+  step = 30,
+}: {
+  value: TimeOfDay;
+  onChange: (time: TimeOfDay) => void;
+  step?: number;
+}) {
+  const shift = (delta: number) => onChange(fromMinutes(toMinutes(value) + delta));
+  return (
+    <View style={styles.stepper}>
+      <Pressable
+        onPress={() => shift(-step)}
+        accessibilityRole="button"
+        accessibilityLabel="Earlier"
+        style={[styles.stepperButton, styles.stepperButtonLeft]}
+      >
+        <Text style={styles.stepperSign}>−</Text>
+      </Pressable>
+      <Text style={styles.stepperValue}>{formatHm12(value)}</Text>
+      <Pressable
+        onPress={() => shift(step)}
+        accessibilityRole="button"
+        accessibilityLabel="Later"
+        style={[styles.stepperButton, styles.stepperButtonRight]}
+      >
+        <Text style={styles.stepperSign}>+</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+export function SettingsScreen({
+  reminderEnabled,
+  reminderTime,
+  boundary,
+  topicCount,
+  onReminderEnabledChange,
+  onReminderTimeChange,
+  onBoundaryChange,
+}: Props) {
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.kicker}>APP</Text>
+        <Text style={styles.title}>Settings</Text>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollBody}>
+        <SectionLabel style={styles.sectionLabelFirst}>REMINDER</SectionLabel>
+        <FieldRow label="Daily reminder">
+          <Toggle on={reminderEnabled} onChange={onReminderEnabledChange} />
+        </FieldRow>
+        {/* The time only matters when the reminder is on; dim it and disable taps when off
+            so the dependency is visible rather than implied. */}
+        <View
+          style={!reminderEnabled && styles.disabled}
+          pointerEvents={reminderEnabled ? 'auto' : 'none'}
+        >
+          <FieldRow label="Remind me at" last>
+            <TimeStepper value={reminderTime} onChange={onReminderTimeChange} />
+          </FieldRow>
+        </View>
+
+        <SectionLabel>LOGGING</SectionLabel>
+        <FieldRow label="Day boundary" last>
+          <TimeStepper value={boundary} onChange={onBoundaryChange} />
+        </FieldRow>
+        {/* The boundary is the one domain setting; explain what it does in user terms. Its
+            freeze semantics (past entries keep their date) live in the providers/core, not
+            here — this copy only describes the forward-looking effect. */}
+        <Text style={styles.note}>
+          Entries made before {formatHm12(boundary)} count toward the previous day, so
+          late-night logs land on the right date.
+        </Text>
+
+        <SectionLabel>DATA</SectionLabel>
+        <FieldRow label="Topics tracked">
+          <Text style={styles.dataValue}>{topicCount}</Text>
+        </FieldRow>
+        <FieldRow label="Storage" last>
+          <Text style={styles.dataMuted}>on device · offline</Text>
+        </FieldRow>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: theme.paper },
+
+  // 56px top clears the iOS notch without a safe-area dependency; matches the other screens.
+  header: {
+    paddingTop: 56,
+    paddingHorizontal: 18,
+    paddingBottom: 14,
+    borderBottomWidth: 1.5,
+    borderBottomColor: theme.rule,
+  },
+  kicker: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    letterSpacing: 1.5,
+    color: theme.muted,
+    marginBottom: 7,
+  },
+  title: {
+    fontFamily: fonts.sans,
+    fontSize: 32,
+    fontWeight: '800',
+    letterSpacing: -0.8,
+    color: theme.ink,
+  },
+
+  scrollBody: { paddingHorizontal: 18, paddingBottom: 120 },
+
+  sectionLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    color: theme.muted,
+    paddingTop: 22,
+    paddingBottom: 8,
+  },
+  sectionLabelFirst: { paddingTop: 8 },
+
+  disabled: { opacity: 0.4 },
+
+  fieldRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingVertical: 15,
+    borderBottomWidth: 1.5,
+    borderBottomColor: theme.rule,
+  },
+  fieldRowLast: { borderBottomWidth: 0 },
+  fieldLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 12,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: theme.muted,
+    flexShrink: 1,
+  },
+  fieldControl: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 },
+
+  note: {
+    fontFamily: fonts.mono,
+    fontSize: 11,
+    lineHeight: 18,
+    color: theme.muted,
+    marginTop: 12,
+  },
+
+  dataValue: { fontFamily: fonts.mono, fontSize: 13, fontWeight: '700', color: theme.ink },
+  dataMuted: { fontFamily: fonts.mono, fontSize: 12, color: theme.muted },
+
+  // Toggle: 52×30 track with a 22×22 knob inset 2px on the matching side.
+  toggleTrack: {
+    width: 52,
+    height: 30,
+    borderWidth: 1.5,
+    borderColor: theme.ink,
+    borderRadius: theme.radius,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+  },
+  toggleTrackOn: { backgroundColor: theme.ink },
+  toggleKnob: {
+    position: 'absolute',
+    top: 2,
+    width: 22,
+    height: 22,
+  },
+  toggleKnobOff: { left: 2, backgroundColor: theme.ink },
+  toggleKnobOn: { left: 24, backgroundColor: theme.paper },
+
+  // Stepper: bordered row, ink dividers between the −/value/+ cells.
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: theme.ink,
+    borderRadius: theme.radius,
+    overflow: 'hidden',
+  },
+  stepperButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  stepperButtonLeft: { borderRightWidth: 1.5, borderRightColor: theme.ink },
+  stepperButtonRight: { borderLeftWidth: 1.5, borderLeftColor: theme.ink },
+  stepperSign: { fontFamily: fonts.sans, fontSize: 18, fontWeight: '700', color: theme.ink },
+  stepperValue: {
+    fontFamily: fonts.mono,
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.ink,
+    minWidth: 96,
+    textAlign: 'center',
+  },
+});
