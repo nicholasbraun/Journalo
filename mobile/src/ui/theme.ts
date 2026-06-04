@@ -18,6 +18,13 @@ export const theme = {
   // Square corners are the design default (`radius: "square"` => 0px). Kept as a
   // token so a future radius tweak is one edit, not a hunt through the screen.
   radius: 0,
+  // Rounded radii reserved for FLOATING liquid-glass chrome only. Native Liquid Glass
+  // reads as a soft, capsule-edged material, so the glass toolbar/buttons that hover
+  // over scrolling content round their corners — while `radius: 0` stays the law for
+  // the brutalist paper content beneath them. Full-bleed glass (the top headers) keeps
+  // square corners since it meets the screen edges.
+  glassRadius: 18,
+  capsule: 999,
 } as const;
 
 // The handoff uses Helvetica Neue (≈ system sans on iOS) and JetBrains Mono. We use
