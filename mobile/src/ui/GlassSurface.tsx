@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { View, type ViewProps } from 'react-native';
+import { type StyleProp, View, type ViewProps, type ViewStyle } from 'react-native';
 import { GlassView, isLiquidGlassAvailable, type GlassStyle } from 'expo-glass-effect';
 
 import { theme } from './theme';
@@ -19,6 +19,11 @@ type Props = ViewProps & {
   glassEffectStyle?: GlassStyle;
   tintColor?: string;
   isInteractive?: boolean;
+  // Styles applied ONLY on the solid-paper fallback path, never to real glass. Use this for
+  // the hard ink border that defines a paper panel: on actual Liquid Glass that border fights
+  // the material (the capsule reads as a bordered paper pill, hiding the glass), so glass
+  // surfaces stay border-free and let the material draw its own edge.
+  fallbackStyle?: StyleProp<ViewStyle>;
   children?: ReactNode;
 };
 
@@ -36,6 +41,7 @@ export function GlassSurface({
   glassEffectStyle = 'regular',
   tintColor,
   isInteractive,
+  fallbackStyle,
   style,
   children,
   ...rest
@@ -57,7 +63,10 @@ export function GlassSurface({
     );
   }
   return (
-    <View style={[{ backgroundColor: theme.paper, borderRadius: radius }, style]} {...rest}>
+    <View
+      style={[{ backgroundColor: theme.paper, borderRadius: radius }, style, fallbackStyle]}
+      {...rest}
+    >
       {children}
     </View>
   );

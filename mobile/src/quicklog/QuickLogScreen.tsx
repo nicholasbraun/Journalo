@@ -199,7 +199,12 @@ export function QuickLogScreen({ state, loggingDate, dateLabel, boundaryLabel, o
           Only with topics present — the empty state already offers a centered button, and a
           floating one over an empty screen reads oddly. */}
       {!isEmpty && (
-        <GlassSurface radius={theme.capsule} isInteractive style={styles.fab}>
+        <GlassSurface
+          radius={theme.capsule}
+          isInteractive
+          style={styles.fab}
+          fallbackStyle={styles.fabBorder}
+        >
           <Pressable onPress={onNewTopic} accessibilityRole="button" style={styles.fabPress}>
             <Text style={styles.fabLabel}>+  New topic</Text>
           </Pressable>
@@ -354,16 +359,17 @@ const styles = StyleSheet.create({
   },
 
   // The standing create action as a floating glass capsule, bottom-right above the native
-  // tab bar. Ink border + clipped corners so it reads as a button on the solid-paper
-  // fallback; the press target (with its padding) lives in `fabPress` inside the glass.
+  // tab bar. The defining ink border is fallback-only (see fabBorder) so real glass stays
+  // border-free; the press target (with its padding) lives in `fabPress` inside the glass.
   fab: {
     position: 'absolute',
     right: 18,
     bottom: 96,
-    borderWidth: 1.5,
-    borderColor: theme.ink,
     overflow: 'hidden',
   },
+  // Applied only on the solid-paper fallback so the pill reads as a button; Liquid Glass
+  // draws its own edge and needs no border.
+  fabBorder: { borderWidth: 1.5, borderColor: theme.ink },
   fabPress: { paddingHorizontal: 18, paddingVertical: 14 },
   fabLabel: {
     fontFamily: fonts.sans,
