@@ -202,8 +202,9 @@ export function QuickLogScreen({ state, loggingDate, dateLabel, boundaryLabel, o
         <GlassSurface
           radius={theme.capsule}
           isInteractive
+          tintColor={theme.ink}
           style={styles.fab}
-          fallbackStyle={styles.fabBorder}
+          fallbackStyle={styles.fabFallback}
         >
           <Pressable onPress={onNewTopic} accessibilityRole="button" style={styles.fabPress}>
             <Text style={styles.fabLabel}>+  New topic</Text>
@@ -358,24 +359,26 @@ const styles = StyleSheet.create({
     color: theme.paper,
   },
 
-  // The standing create action as a floating glass capsule, bottom-right above the native
-  // tab bar. The defining ink border is fallback-only (see fabBorder) so real glass stays
-  // border-free; the press target (with its padding) lives in `fabPress` inside the glass.
+  // The standing create action: a PROMINENT (ink-tinted) glass capsule bottom-right, above
+  // the native tab bar. A primary action must always read as tappable, so unlike the at-rest
+  // chrome it carries the brand-ink tint rather than clear glass — the Liquid Glass form of
+  // the original solid button. The press target (with its padding) lives in `fabPress`.
   fab: {
     position: 'absolute',
     right: 18,
     bottom: 96,
     overflow: 'hidden',
   },
-  // Applied only on the solid-paper fallback so the pill reads as a button; Liquid Glass
-  // draws its own edge and needs no border.
-  fabBorder: { borderWidth: 1.5, borderColor: theme.ink },
+  // The solid-paper fallback can't tint glass, so fill it with ink: a plain solid-ink pill,
+  // matching the tinted glass's prominence on older iOS / Android.
+  fabFallback: { backgroundColor: theme.ink },
   fabPress: { paddingHorizontal: 18, paddingVertical: 14 },
   fabLabel: {
     fontFamily: fonts.sans,
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.2,
-    color: theme.ink,
+    // Paper-on-ink: the label sits over the ink tint (glass) or the ink fill (fallback).
+    color: theme.paper,
   },
 });
