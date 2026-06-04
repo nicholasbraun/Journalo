@@ -14,7 +14,11 @@ import type { Scale } from '@journal/core';
 
 import { buildRamp } from '../ui/colorRamp';
 import { DEFAULT_TOPIC_COLOR, TOPIC_COLORS } from '../ui/palette';
+import { ScreenHeader } from '../ui/ScreenHeader';
 import { fonts, theme } from '../ui/theme';
+
+// First-paint estimate for the floating header; corrected by onLayout (see QuickLogScreen).
+const HEADER_ESTIMATE = 112;
 
 // The New Topic screen: name + color is the whole fast path; scale customization is
 // tucked behind a disclosure so a topic is creatable in two taps (ARCHITECTURE.md §3).
@@ -86,9 +90,11 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
     });
   };
 
+  const [headerHeight, setHeaderHeight] = useState(HEADER_ESTIMATE);
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <ScreenHeader onHeightChange={setHeaderHeight} contentStyle={styles.headerRow}>
         <Pressable
           onPress={onCancel}
           accessibilityRole="button"
@@ -106,7 +112,7 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
         >
           <Text style={styles.createBtnLabel}>Create</Text>
         </Pressable>
-      </View>
+      </ScreenHeader>
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
@@ -114,7 +120,10 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
         // region by the keyboard height; Android's adjustResize handles it natively.
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[styles.body, { paddingTop: headerHeight }]}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* NAME — the only required free-text field. */}
         <View style={styles.section}>
           <Text style={styles.fieldLabel}>NAME</Text>
@@ -238,12 +247,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.paper },
   keyboardView: { flex: 1 },
 
-  header: {
-    paddingTop: 56,
-    paddingHorizontal: 18,
-    paddingBottom: 14,
-    borderBottomWidth: 1.5,
-    borderBottomColor: theme.rule,
+  // Header chrome (notch inset, padding, hairline) lives in ScreenHeader; this only lays
+  // out the row: cancel button, kicker, create button.
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

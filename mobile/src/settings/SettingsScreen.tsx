@@ -1,11 +1,15 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import type { TimeOfDay } from '@journal/core';
 
+import { ScreenHeader } from '../ui/ScreenHeader';
 import { fonts, theme } from '../ui/theme';
 import { formatHm12 } from '../ui/time';
 import { TimePickerField } from '../ui/TimePickerField';
+
+// First-paint estimate for the floating header; corrected by onLayout (see QuickLogScreen).
+const HEADER_ESTIMATE = 124;
 
 // The Settings screen, transcribed from the design handoff (screen_settings.jsx): a minimal,
 // scrollable list of three sections — Reminder, Logging, Data. Pure presentation: it receives
@@ -75,14 +79,16 @@ export function SettingsScreen({
   onReminderTimeChange,
   onBoundaryChange,
 }: Props) {
+  const [headerHeight, setHeaderHeight] = useState(HEADER_ESTIMATE);
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <ScreenHeader onHeightChange={setHeaderHeight}>
         <Text style={styles.kicker}>APP</Text>
         <Text style={styles.title}>Settings</Text>
-      </View>
+      </ScreenHeader>
 
-      <ScrollView contentContainerStyle={styles.scrollBody}>
+      <ScrollView contentContainerStyle={[styles.scrollBody, { paddingTop: headerHeight }]}>
         <SectionLabel style={styles.sectionLabelFirst}>REMINDER</SectionLabel>
         <FieldRow label="Daily reminder">
           <Toggle on={reminderEnabled} onChange={onReminderEnabledChange} />
@@ -125,14 +131,6 @@ export function SettingsScreen({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.paper },
 
-  // 56px top clears the iOS notch without a safe-area dependency; matches the other screens.
-  header: {
-    paddingTop: 56,
-    paddingHorizontal: 18,
-    paddingBottom: 14,
-    borderBottomWidth: 1.5,
-    borderBottomColor: theme.rule,
-  },
   kicker: {
     fontFamily: fonts.mono,
     fontSize: 11,

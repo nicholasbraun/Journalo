@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import {
@@ -11,7 +12,13 @@ import {
 } from '@journal/core';
 
 import { buildRamp } from '../ui/colorRamp';
+import { GlassSurface } from '../ui/GlassSurface';
+import { ScreenHeader } from '../ui/ScreenHeader';
 import { fonts, theme } from '../ui/theme';
+
+// First-paint estimate for the floating header's height; the real value arrives via
+// onLayout. Close to the measured height so the scroll content barely shifts on mount.
+const HEADER_ESTIMATE = 150;
 
 // The quick-log screen: one scrollable list of today's topics, each with an inline
 // value selector. The two data-semantics invariants are the whole point of this
@@ -136,9 +143,11 @@ export function QuickLogScreen({ state, loggingDate, dateLabel, boundaryLabel, o
   const complete = total > 0 && done === total;
   const isEmpty = total === 0;
 
+  const [headerHeight, setHeaderHeight] = useState(HEADER_ESTIMATE);
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <ScreenHeader onHeightChange={setHeaderHeight} contentStyle={styles.headerRow}>
         <View style={styles.headerMain}>
           <Text style={styles.kicker}>QUICK LOG</Text>
           <Text style={styles.title}>Today</Text>
@@ -155,9 +164,9 @@ export function QuickLogScreen({ state, loggingDate, dateLabel, boundaryLabel, o
             <Text style={styles.counterLabel}>{complete ? 'COMPLETE' : 'LOGGED'}</Text>
           </View>
         )}
-      </View>
+      </ScreenHeader>
 
-      <ScrollView contentContainerStyle={styles.scrollBody}>
+      <ScrollView contentContainerStyle={[styles.scrollBody, { paddingTop: headerHeight }]}>
         {isEmpty ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>No topics yet</Text>
@@ -182,12 +191,20 @@ export function QuickLogScreen({ state, loggingDate, dateLabel, boundaryLabel, o
                 : `${total - done} topic${total - done === 1 ? '' : 's'} still open. ` +
                   'Tap one value per topic — nothing is pre-selected.'}
             </Text>
-            <Pressable onPress={onNewTopic} accessibilityRole="button" style={styles.newTopicOutline}>
-              <Text style={styles.newTopicOutlineLabel}>+  New topic</Text>
-            </Pressable>
           </>
         )}
       </ScrollView>
+
+      {/* Standing "new topic" action as a floating glass capsule, pinned above the tab bar.
+          Only with topics present — the empty state already offers a centered button, and a
+          floating one over an empty screen reads oddly. */}
+      {!isEmpty && (
+        <GlassSurface radius={theme.capsule} isInteractive style={styles.fab}>
+          <Pressable onPress={onNewTopic} accessibilityRole="button" style={styles.fabPress}>
+            <Text style={styles.fabLabel}>+  New topic</Text>
+          </Pressable>
+        </GlassSurface>
+      )}
     </View>
   );
 }
@@ -195,14 +212,9 @@ export function QuickLogScreen({ state, loggingDate, dateLabel, boundaryLabel, o
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.paper },
 
-  // 56px top clears the iOS notch/status bar without pulling in a safe-area dependency
-  // (RN's SafeAreaView is deprecated); matches the handoff's header padding.
-  header: {
-    paddingTop: 56,
-    paddingHorizontal: 18,
-    paddingBottom: 14,
-    borderBottomWidth: 1.5,
-    borderBottomColor: theme.rule,
+  // Header chrome (notch inset, padding, hairline) now lives in ScreenHeader; this only
+  // lays out the header's two columns — title block and progress counter.
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
@@ -239,7 +251,9 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
 
-  scrollBody: { paddingHorizontal: 18, paddingBottom: 120 },
+  // Bottom padding clears both the native tab bar and the floating "+ New topic" capsule
+  // pinned above it, so the last row never hides behind the button.
+  scrollBody: { paddingHorizontal: 18, paddingBottom: 150 },
 
   row: { paddingTop: 18, paddingBottom: 22, borderBottomWidth: 1.5, borderBottomColor: theme.rule },
   rowHeader: {
@@ -339,16 +353,19 @@ const styles = StyleSheet.create({
     color: theme.paper,
   },
 
-  // Secondary (outline) create button standing below the list once topics exist.
-  newTopicOutline: {
-    marginTop: 22,
-    paddingVertical: 14,
+  // The standing create action as a floating glass capsule, bottom-right above the native
+  // tab bar. Ink border + clipped corners so it reads as a button on the solid-paper
+  // fallback; the press target (with its padding) lives in `fabPress` inside the glass.
+  fab: {
+    position: 'absolute',
+    right: 18,
+    bottom: 96,
     borderWidth: 1.5,
     borderColor: theme.ink,
-    borderRadius: theme.radius,
-    alignItems: 'center',
+    overflow: 'hidden',
   },
-  newTopicOutlineLabel: {
+  fabPress: { paddingHorizontal: 18, paddingVertical: 14 },
+  fabLabel: {
     fontFamily: fonts.sans,
     fontSize: 14,
     fontWeight: '700',
