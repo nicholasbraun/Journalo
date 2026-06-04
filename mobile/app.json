@@ -9,7 +9,10 @@
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.mobile"
+      "bundleIdentifier": "de.nicholasbraun.journal",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,15 +22,17 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.mobile"
+      "package": "de.nicholasbraun.journal"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-sqlite",
-      "expo-router",
-      "expo-notifications"
-    ]
+    "plugins": ["expo-sqlite", "expo-router", "expo-notifications"],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "67f695ac-4a4c-4261-8f4e-53e704203589"
+      }
+    }
   }
 }
