@@ -16,7 +16,7 @@ export type {
   TimeOfDay,
 } from "./events.js";
 
-export { loggingDateFor } from "./loggingDate.js";
+export { loggingDateFor, DEFAULT_BOUNDARY } from "./loggingDate.js";
 export type { WallClock } from "./loggingDate.js";
 
 export { fold, cellState, activeTopics } from "./fold.js";

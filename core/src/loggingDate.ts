@@ -14,7 +14,9 @@ export type WallClock = {
   readonly minute: number;
 };
 
-const DEFAULT_BOUNDARY: TimeOfDay = { hour: 4, minute: 0 };
+// The default logging-day boundary: 04:00. Exported so the shell can seed its
+// boundary setting from the one canonical default rather than re-hardcoding it.
+export const DEFAULT_BOUNDARY: TimeOfDay = { hour: 4, minute: 0 };
 
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 
