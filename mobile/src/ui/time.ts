@@ -18,9 +18,15 @@ const pad2 = (n: number): string => String(n).padStart(2, '0');
 // 24-hour "HH:MM" — the compact form for the day-boundary cue on the quick-log header.
 export const formatHm24 = (time: TimeOfDay): string => `${pad2(time.hour)}:${pad2(time.minute)}`;
 
-// 12-hour "HH:MM AM/PM" — the human form shown in the settings steppers.
+// 12-hour "HH:MM AM/PM" — the human form shown in the settings pickers.
 export const formatHm12 = (time: TimeOfDay): string => {
   const meridiem = time.hour < 12 ? 'AM' : 'PM';
   const h12 = time.hour % 12 === 0 ? 12 : time.hour % 12;
   return `${pad2(h12)}:${pad2(time.minute)} ${meridiem}`;
 };
+
+// Bridges to/from the native time picker, which speaks Date. Only the time-of-day
+// is meaningful here; the calendar date is a fixed, ignored reference (the picker
+// in `mode="time"` shows only hours/minutes).
+export const toDate = (time: TimeOfDay): Date => new Date(2000, 0, 1, time.hour, time.minute);
+export const fromDate = (date: Date): TimeOfDay => ({ hour: date.getHours(), minute: date.getMinutes() });

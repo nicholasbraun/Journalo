@@ -4,7 +4,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { TimeOfDay } from '@journal/core';
 
 import { fonts, theme } from '../ui/theme';
-import { formatHm12, fromMinutes, toMinutes } from '../ui/time';
+import { formatHm12 } from '../ui/time';
+import { TimePickerField } from '../ui/TimePickerField';
 
 // The Settings screen, transcribed from the design handoff (screen_settings.jsx): a minimal,
 // scrollable list of three sections — Reminder, Logging, Data. Pure presentation: it receives
@@ -65,41 +66,6 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void
   );
 }
 
-// A −/value/+ stepper over a time-of-day. Steps in `step`-minute increments and wraps at
-// midnight in both directions (via fromMinutes), so there is no invalid state to guard.
-function TimeStepper({
-  value,
-  onChange,
-  step = 30,
-}: {
-  value: TimeOfDay;
-  onChange: (time: TimeOfDay) => void;
-  step?: number;
-}) {
-  const shift = (delta: number) => onChange(fromMinutes(toMinutes(value) + delta));
-  return (
-    <View style={styles.stepper}>
-      <Pressable
-        onPress={() => shift(-step)}
-        accessibilityRole="button"
-        accessibilityLabel="Earlier"
-        style={[styles.stepperButton, styles.stepperButtonLeft]}
-      >
-        <Text style={styles.stepperSign}>−</Text>
-      </Pressable>
-      <Text style={styles.stepperValue}>{formatHm12(value)}</Text>
-      <Pressable
-        onPress={() => shift(step)}
-        accessibilityRole="button"
-        accessibilityLabel="Later"
-        style={[styles.stepperButton, styles.stepperButtonRight]}
-      >
-        <Text style={styles.stepperSign}>+</Text>
-      </Pressable>
-    </View>
-  );
-}
-
 export function SettingsScreen({
   reminderEnabled,
   reminderTime,
@@ -128,13 +94,13 @@ export function SettingsScreen({
           pointerEvents={reminderEnabled ? 'auto' : 'none'}
         >
           <FieldRow label="Remind me at" last>
-            <TimeStepper value={reminderTime} onChange={onReminderTimeChange} />
+            <TimePickerField value={reminderTime} onChange={onReminderTimeChange} />
           </FieldRow>
         </View>
 
         <SectionLabel>LOGGING</SectionLabel>
         <FieldRow label="Day boundary" last>
-          <TimeStepper value={boundary} onChange={onBoundaryChange} />
+          <TimePickerField value={boundary} onChange={onBoundaryChange} />
         </FieldRow>
         {/* The boundary is the one domain setting; explain what it does in user terms. Its
             freeze semantics (past entries keep their date) live in the providers/core, not
@@ -246,26 +212,4 @@ const styles = StyleSheet.create({
   },
   toggleKnobOff: { left: 2, backgroundColor: theme.ink },
   toggleKnobOn: { left: 24, backgroundColor: theme.paper },
-
-  // Stepper: bordered row, ink dividers between the −/value/+ cells.
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: theme.ink,
-    borderRadius: theme.radius,
-    overflow: 'hidden',
-  },
-  stepperButton: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
-  stepperButtonLeft: { borderRightWidth: 1.5, borderRightColor: theme.ink },
-  stepperButtonRight: { borderLeftWidth: 1.5, borderLeftColor: theme.ink },
-  stepperSign: { fontFamily: fonts.sans, fontSize: 18, fontWeight: '700', color: theme.ink },
-  stepperValue: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
-    fontWeight: '700',
-    color: theme.ink,
-    minWidth: 96,
-    textAlign: 'center',
-  },
 });
