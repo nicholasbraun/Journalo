@@ -10,12 +10,25 @@ import {
   View,
 } from 'react-native';
 
+import { LinearGradient } from 'expo-linear-gradient';
+
 import type { Scale } from '@journal/core';
 
 import { buildRamp } from '../ui/colorRamp';
 import { GlassSurface } from '../ui/GlassSurface';
 import { DEFAULT_TOPIC_COLOR, TOPIC_COLORS } from '../ui/palette';
 import { fonts, theme } from '../ui/theme';
+
+// The floating header's height (56 notch inset + 44 disc + 14 below). Deterministic
+// because the discs are fixed-size, so the scroll region can reserve it as top padding
+// without measuring. The form's first section then begins just below the discs.
+const HEADER_HEIGHT = 114;
+
+// `theme.paper` (#F4F1E9) at zero alpha — the clear end of the top fade. The scrim runs
+// from solid paper at the very top edge to this, so content scrolling up dissolves into
+// the paper near the status bar instead of clipping hard, while staying visible (and thus
+// refractable by the glass discs) lower down.
+const PAPER_CLEAR = 'rgba(244,241,233,0)';
 
 // The New Topic screen: name + color is the whole fast path; scale customization is
 // tucked behind a disclosure so a topic is creatable in two taps (ARCHITECTURE.md §3).
@@ -89,46 +102,6 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
 
   return (
     <View style={styles.container}>
-      {/* A plain paper header row (no glass bar): only the close/create discs are glass.
-          It sits above the scroll region rather than floating over it, so it stays fixed
-          while the form scrolls without a glass material to refract the content beneath. */}
-      <View style={styles.header}>
-        <GlassSurface
-          radius={theme.capsule}
-          isInteractive
-          glassEffectStyle="clear"
-          style={styles.glassBtn}
-          fallbackStyle={styles.glassBtnFallback}
-        >
-          <Pressable
-            onPress={onCancel}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel"
-            style={styles.glassBtnPress}
-          >
-            <Text style={styles.glassGlyph}>✕</Text>
-          </Pressable>
-        </GlassSurface>
-        <Text style={styles.kicker}>NEW TOPIC</Text>
-        <GlassSurface
-          radius={theme.capsule}
-          isInteractive
-          glassEffectStyle="clear"
-          style={[styles.glassBtn, !canCreate && styles.glassBtnDisabled]}
-          fallbackStyle={styles.glassBtnFallback}
-        >
-          <Pressable
-            onPress={submit}
-            disabled={!canCreate}
-            accessibilityRole="button"
-            accessibilityLabel="Create"
-            style={styles.glassBtnPress}
-          >
-            <Text style={styles.glassGlyph}>＋</Text>
-          </Pressable>
-        </GlassSurface>
-      </View>
-
       <KeyboardAvoidingView
         style={styles.keyboardView}
         // The fixed header sits outside this view, so on iOS we pad only the scroll
@@ -136,7 +109,7 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={styles.body}
+          contentContainerStyle={[styles.body, { paddingTop: HEADER_HEIGHT }]}
           keyboardShouldPersistTaps="handled"
         >
         {/* NAME — the only required free-text field. */}
@@ -254,6 +227,56 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
         )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Top fade: solid paper at the very edge fading to clear, so content scrolling up
+          dissolves into the paper near the status bar instead of clipping hard. Sits above
+          the scroll but below the header; non-interactive so it never blocks the form. */}
+      <LinearGradient
+        colors={[theme.paper, theme.paper, PAPER_CLEAR]}
+        locations={[0, 0.4, 1]}
+        pointerEvents="none"
+        style={styles.topFade}
+      />
+
+      {/* The floating header: transparent (no bar) and rendered last so it sits above the
+          scroll content — the content (and the fade) pass UNDER the glass discs, which
+          refract them. Only the discs are liquid glass. */}
+      <View style={styles.header}>
+        <GlassSurface
+          radius={theme.capsule}
+          isInteractive
+          glassEffectStyle="clear"
+          style={styles.glassBtn}
+          fallbackStyle={styles.glassBtnFallback}
+        >
+          <Pressable
+            onPress={onCancel}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+            style={styles.glassBtnPress}
+          >
+            <Text style={styles.glassGlyph}>✕</Text>
+          </Pressable>
+        </GlassSurface>
+        <Text style={styles.kicker}>NEW TOPIC</Text>
+        <GlassSurface
+          radius={theme.capsule}
+          isInteractive
+          glassEffectStyle="clear"
+          style={[styles.glassBtn, !canCreate && styles.glassBtnDisabled]}
+          fallbackStyle={styles.glassBtnFallback}
+        >
+          <Pressable
+            onPress={submit}
+            disabled={!canCreate}
+            accessibilityRole="button"
+            accessibilityLabel="Create"
+            style={styles.glassBtnPress}
+          >
+            <Text style={styles.glassGlyph}>＋</Text>
+          </Pressable>
+        </GlassSurface>
+      </View>
     </View>
   );
 }
@@ -262,18 +285,32 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.paper },
   keyboardView: { flex: 1 },
 
-  // Plain paper header: 56px top clears the iOS notch/status bar without a safe-area
-  // dependency (the value ScreenHeader used), a hairline rule separates it from the form,
-  // and the row lays out cancel disc, kicker, create disc.
+  // Floating, transparent header: pinned to the top so the form scrolls UNDER it and the
+  // glass discs refract that content. No background and no rule — the top fade (below)
+  // provides the separation; a hard bar or border would defeat the whole point. 56px top
+  // clears the iOS notch/status bar without a safe-area dependency.
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
     paddingTop: 56,
     paddingHorizontal: 18,
     paddingBottom: 14,
-    borderBottomWidth: 1.5,
-    borderBottomColor: theme.rule,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  // The scrim that fades scrolled content into the paper at the top edge. Spans the header
+  // band; `colors`/`locations` (set inline) keep it solid paper across the status bar then
+  // clear by the bottom, so content stays visible — and refractable — behind the discs.
+  topFade: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HEADER_HEIGHT,
   },
   // Close / Create are clear-glass circular icon buttons (iOS Weather style). A faint
   // hairline ring — NOT the hard ink panel border — lets the untinted glass read against
