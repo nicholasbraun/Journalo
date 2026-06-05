@@ -13,6 +13,7 @@ import {
 import type { Scale } from '@journal/core';
 
 import { buildRamp } from '../ui/colorRamp';
+import { GlassSurface } from '../ui/GlassSurface';
 import { DEFAULT_TOPIC_COLOR, TOPIC_COLORS } from '../ui/palette';
 import { ScreenHeader } from '../ui/ScreenHeader';
 import { fonts, theme } from '../ui/theme';
@@ -95,23 +96,40 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
   return (
     <View style={styles.container}>
       <ScreenHeader onHeightChange={setHeaderHeight} contentStyle={styles.headerRow}>
-        <Pressable
-          onPress={onCancel}
-          accessibilityRole="button"
-          accessibilityLabel="Cancel"
-          style={styles.iconBtn}
+        <GlassSurface
+          radius={theme.capsule}
+          isInteractive
+          glassEffectStyle="clear"
+          style={styles.glassBtn}
+          fallbackStyle={styles.glassBtnFallback}
         >
-          <Text style={styles.iconGlyph}>✕</Text>
-        </Pressable>
+          <Pressable
+            onPress={onCancel}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+            style={styles.glassBtnPress}
+          >
+            <Text style={styles.glassGlyph}>✕</Text>
+          </Pressable>
+        </GlassSurface>
         <Text style={styles.kicker}>NEW TOPIC</Text>
-        <Pressable
-          onPress={submit}
-          disabled={!canCreate}
-          accessibilityRole="button"
-          style={[styles.createBtn, !canCreate && styles.createBtnDisabled]}
+        <GlassSurface
+          radius={theme.capsule}
+          isInteractive
+          glassEffectStyle="clear"
+          style={[styles.glassBtn, !canCreate && styles.glassBtnDisabled]}
+          fallbackStyle={styles.glassBtnFallback}
         >
-          <Text style={styles.createBtnLabel}>Create</Text>
-        </Pressable>
+          <Pressable
+            onPress={submit}
+            disabled={!canCreate}
+            accessibilityRole="button"
+            accessibilityLabel="Create"
+            style={styles.glassBtnPress}
+          >
+            <Text style={styles.glassGlyph}>＋</Text>
+          </Pressable>
+        </GlassSurface>
       </ScreenHeader>
 
       <KeyboardAvoidingView
@@ -254,40 +272,34 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderWidth: 1.5,
-    borderColor: theme.ink,
-    borderRadius: theme.radius,
+  // Close / Create are clear-glass circular icon buttons (iOS Weather style). A faint
+  // hairline ring — NOT the hard ink panel border — lets the untinted glass read against
+  // the pale paper, the same thin stroke the Weather controls carry; the ring lives in
+  // `style` so it shows on both the glass and solid-paper-fallback paths.
+  glassBtn: {
+    width: 44,
+    height: 44,
+    borderWidth: 1,
+    borderColor: theme.hair,
+    overflow: 'hidden',
+  },
+  // Pressable fills the whole circle so the entire glass disc is the tap target.
+  glassBtnPress: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  iconGlyph: { fontFamily: fonts.sans, fontSize: 18, color: theme.ink, lineHeight: 20 },
+  // Create stays dimmed until the form is valid (mirrors the old createBtnDisabled).
+  glassBtnDisabled: { opacity: 0.35 },
+  // The fallback disc gets a faint fill so it reads as a circle on Android / pre-iOS-26,
+  // where there is no glass material to define its edge.
+  glassBtnFallback: { backgroundColor: theme.field },
+  glassGlyph: { fontFamily: fonts.sans, fontSize: 18, color: theme.ink, lineHeight: 22 },
   kicker: {
     fontFamily: fonts.mono,
     fontSize: 11,
     letterSpacing: 1.5,
     color: theme.muted,
-  },
-  createBtn: {
-    minWidth: 64,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    backgroundColor: theme.ink,
-    borderWidth: 1.5,
-    borderColor: theme.ink,
-    borderRadius: theme.radius,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  createBtnDisabled: { opacity: 0.35 },
-  createBtnLabel: {
-    fontFamily: fonts.sans,
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-    color: theme.paper,
   },
 
   body: { paddingHorizontal: 18, paddingBottom: 60 },
