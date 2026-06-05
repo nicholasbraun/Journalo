@@ -19,10 +19,10 @@ import { GlassSurface } from '../ui/GlassSurface';
 import { DEFAULT_TOPIC_COLOR, TOPIC_COLORS } from '../ui/palette';
 import { fonts, theme } from '../ui/theme';
 
-// The floating header's height (44 notch inset + 44 disc + 14 below). Deterministic
+// The floating header's height (18 top inset + 44 disc + 14 below). Deterministic
 // because the discs are fixed-size, so the scroll region can reserve it as top padding
 // without measuring. The form's first section then begins just below the discs.
-const HEADER_HEIGHT = 102;
+const HEADER_HEIGHT = 76;
 
 // `theme.paper` (#F4F1E9) at zero alpha — the clear end of the top fade. The scrim runs
 // from solid paper at the very top edge to this, so content scrolling up dissolves into
@@ -287,15 +287,16 @@ const styles = StyleSheet.create({
 
   // Floating, transparent header: pinned to the top so the form scrolls UNDER it and the
   // glass discs refract that content. No background and no rule — the top fade (below)
-  // provides the separation; a hard bar or border would defeat the whole point. 44px top
-  // clears the iOS notch/status bar without a safe-area dependency.
+  // provides the separation; a hard bar or border would defeat the whole point. The top
+  // inset equals the horizontal one (18) so the discs are evenly margined from the modal's
+  // top and side edges — no notch to clear, since this is a modal sheet below the status bar.
   header: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     zIndex: 10,
-    paddingTop: 44,
+    paddingTop: 18,
     paddingHorizontal: 18,
     paddingBottom: 14,
     flexDirection: 'row',
