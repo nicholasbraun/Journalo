@@ -1,5 +1,3 @@
-import { Platform } from 'react-native';
-
 // Visual tokens for the liquid-glass redesign (light, cool, airy), transcribed from the
 // Claude Design handoff `glass.css`. These are pure display values and live entirely in the
 // shell — the design layer never reaches into core.
@@ -35,17 +33,9 @@ export const theme = {
   rChip: 999, // pills / capsules
   rCell: 7, // soft-square heatmap cells
 
-  // ===== Legacy tokens (brutalist paper) — still referenced by the not-yet-reskinned
-  // Year / New Topic / Settings screens. Remove once Phase 2 reskins them. =====
-  paper: '#F4F1E9',
-  muted: 'rgba(60,60,67,0.62)',
-  rule: 'rgba(60,60,67,0.20)',
-  hair: 'rgba(60,60,67,0.12)',
-  empty: 'rgba(110,116,134,0.13)',
-  field: 'rgba(255,255,255,0.55)',
-  radius: 0,
-  glassRadius: 18,
-  capsule: 999,
+  // A cool near-white, used as the brief loading-screen background behind the providers
+  // before the mesh-backed UI mounts (matches the mesh's pale base so there's no flash).
+  paper: '#eef2fb',
 } as const;
 
 // Spring + easing curves from the handoff (`--ease-spring`, `--ease-out`). Reanimated
@@ -60,10 +50,6 @@ export const motion = {
 
 // Fully clean SF-style type — no mono. `undefined` resolves to the system font (San
 // Francisco on iOS, Roboto on Android), which is exactly the design's intent.
-//
-// `mono` is retained only for the legacy Year/Settings/New-Topic screens until Phase 2
-// reskins them; it is unused by the redesigned screens.
 export const fonts = {
   sans: undefined as string | undefined,
-  mono: Platform.select({ ios: 'Courier', android: 'monospace', default: 'monospace' }),
 } as const;
