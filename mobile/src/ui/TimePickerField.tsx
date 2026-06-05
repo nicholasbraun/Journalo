@@ -33,7 +33,7 @@ export function TimePickerField({ value, onChange }: Props) {
         value={toDate(value)}
         mode="time"
         display="compact"
-        accentColor={theme.ink}
+        accentColor={theme.accent}
         themeVariant="light"
         onChange={handle}
       />
@@ -57,16 +57,15 @@ export function TimePickerField({ value, onChange }: Props) {
 
 const styles = StyleSheet.create({
   androidField: {
-    borderWidth: 1.5,
-    borderColor: theme.ink,
-    borderRadius: theme.radius,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+    backgroundColor: 'rgba(120,120,128,0.14)',
+    borderRadius: 9,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
   },
   androidValue: {
-    fontFamily: fonts.mono,
-    fontSize: 13,
-    fontWeight: '700',
+    fontFamily: fonts.sans,
+    fontSize: 15,
+    fontWeight: '600',
     color: theme.ink,
   },
 });

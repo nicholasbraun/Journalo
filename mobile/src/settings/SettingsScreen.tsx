@@ -1,18 +1,17 @@
-import { type ReactNode, useState } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import type { TimeOfDay } from '@journal/core';
 
-import { ScreenHeader } from '../ui/ScreenHeader';
-import { fonts, theme } from '../ui/theme';
+import { GlassSurface } from '../ui/GlassSurface';
+import { SvgMesh } from '../ui/SvgMesh';
+import { fonts, motion, theme } from '../ui/theme';
 import { formatHm12 } from '../ui/time';
 import { TimePickerField } from '../ui/TimePickerField';
 
-// First-paint estimate for the floating header; corrected by onLayout (see QuickLogScreen).
-const HEADER_ESTIMATE = 124;
-
-// The Settings screen, transcribed from the design handoff (screen_settings.jsx): a minimal,
-// scrollable list of three sections — Reminder, Logging, Data. Pure presentation: it receives
+// The Settings screen (design handoff `settings.jsx`): iOS inset grouped lists rendered as
+// frosted glass cards over the mesh — Reminder, Logging, Data. Pure presentation: it receives
 // every value and callback as props and reads no context itself (the route wires it to
 // SettingsProvider + the journal), so the data-vs-display distinction stays in the providers.
 
@@ -26,46 +25,47 @@ type Props = {
   readonly onBoundaryChange: (boundary: TimeOfDay) => void;
 };
 
-// A muted mono caption introducing each section.
-function SectionLabel({ children, style }: { children: ReactNode; style?: object }) {
-  return <Text style={[styles.sectionLabel, style]}>{children}</Text>;
-}
-
-// A labeled row: caption on the left, control on the right, with a hairline beneath unless
-// it is the last row in its section.
-function FieldRow({
-  label,
-  children,
-  last = false,
-}: {
-  label: string;
-  children: ReactNode;
-  last?: boolean;
-}) {
+// An inset grouped section: an uppercase caption, a glass card holding the rows, and an
+// optional footer note beneath.
+function Group({ header, footer, children }: { header: string; footer?: string; children: ReactNode }) {
   return (
-    <View style={[styles.fieldRow, last && styles.fieldRowLast]}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={styles.fieldControl}>{children}</View>
+    <View style={styles.group}>
+      <Text style={styles.groupHeader}>{header}</Text>
+      <GlassSurface strong radius={20} style={styles.groupCard}>
+        {children}
+      </GlassSurface>
+      {footer ? <Text style={styles.groupFooter}>{footer}</Text> : null}
     </View>
   );
 }
 
-// The on/off switch. A bordered track that fills with ink when on; the knob sits left when
-// off and right when on. No sliding animation — the position swap reads clearly on its own.
+// A labeled row inside a group: label left, control right, hairline beneath unless last.
+function Row({ label, children, last = false }: { label: string; children: ReactNode; last?: boolean }) {
+  return (
+    <View style={styles.row}>
+      <Text style={styles.rowLabel}>{label}</Text>
+      <View style={styles.rowControl}>{children}</View>
+      {!last && <View style={styles.rowDivider} />}
+    </View>
+  );
+}
+
+// The on/off switch: an iOS-style track that fills accent when on, with a knob that springs
+// across (CLAUDE.md "display setting" — purely cosmetic, no data consequence).
 function Toggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  const pos = useSharedValue(on ? 1 : 0);
+  useEffect(() => {
+    pos.value = withSpring(on ? 1 : 0, motion.spring);
+  }, [on, pos]);
+  const knobStyle = useAnimatedStyle(() => ({ transform: [{ translateX: pos.value * 20 }] }));
   return (
     <Pressable
       onPress={() => onChange(!on)}
       accessibilityRole="switch"
       accessibilityState={{ checked: on }}
-      style={[styles.toggleTrack, on && styles.toggleTrackOn]}
+      style={[styles.track, { backgroundColor: on ? theme.accent : 'rgba(120,120,128,0.22)' }]}
     >
-      <View
-        style={[
-          styles.toggleKnob,
-          on ? styles.toggleKnobOn : styles.toggleKnobOff,
-        ]}
-      />
+      <Animated.View style={[styles.knob, knobStyle]} />
     </Pressable>
   );
 }
@@ -79,135 +79,119 @@ export function SettingsScreen({
   onReminderTimeChange,
   onBoundaryChange,
 }: Props) {
-  const [headerHeight, setHeaderHeight] = useState(HEADER_ESTIMATE);
-
   return (
     <View style={styles.container}>
-      <ScreenHeader onHeightChange={setHeaderHeight}>
-        <Text style={styles.kicker}>APP</Text>
-        <Text style={styles.title}>Settings</Text>
-      </ScreenHeader>
-
-      <ScrollView contentContainerStyle={[styles.scrollBody, { paddingTop: headerHeight }]}>
-        <SectionLabel style={styles.sectionLabelFirst}>REMINDER</SectionLabel>
-        <FieldRow label="Daily reminder">
-          <Toggle on={reminderEnabled} onChange={onReminderEnabledChange} />
-        </FieldRow>
-        {/* The time only matters when the reminder is on; dim it and disable taps when off
-            so the dependency is visible rather than implied. */}
-        <View
-          style={!reminderEnabled && styles.disabled}
-          pointerEvents={reminderEnabled ? 'auto' : 'none'}
-        >
-          <FieldRow label="Remind me at" last>
-            <TimePickerField value={reminderTime} onChange={onReminderTimeChange} />
-          </FieldRow>
+      <SvgMesh />
+      <ScrollView contentContainerStyle={styles.scrollBody}>
+        <View style={styles.header}>
+          <Text style={styles.kicker}>APP</Text>
+          <Text style={styles.title}>Settings</Text>
         </View>
 
-        <SectionLabel>LOGGING</SectionLabel>
-        <FieldRow label="Day boundary" last>
-          <TimePickerField value={boundary} onChange={onBoundaryChange} />
-        </FieldRow>
-        {/* The boundary is the one domain setting; explain what it does in user terms. Its
-            freeze semantics (past entries keep their date) live in the providers/core, not
-            here — this copy only describes the forward-looking effect. */}
-        <Text style={styles.note}>
-          Entries made before {formatHm12(boundary)} count toward the previous day, so
-          late-night logs land on the right date.
-        </Text>
+        <Group header="Reminder">
+          <Row label="Daily reminder">
+            <Toggle on={reminderEnabled} onChange={onReminderEnabledChange} />
+          </Row>
+          {/* The time only matters when the reminder is on; dim it and disable taps when off
+              so the dependency is visible rather than implied. */}
+          <View
+            style={!reminderEnabled && styles.disabled}
+            pointerEvents={reminderEnabled ? 'auto' : 'none'}
+          >
+            <Row label="Remind me at" last>
+              <TimePickerField value={reminderTime} onChange={onReminderTimeChange} />
+            </Row>
+          </View>
+        </Group>
 
-        <SectionLabel>DATA</SectionLabel>
-        <FieldRow label="Topics tracked">
-          <Text style={styles.dataValue}>{topicCount}</Text>
-        </FieldRow>
-        <FieldRow label="Storage" last>
-          <Text style={styles.dataMuted}>on device · offline</Text>
-        </FieldRow>
+        <Group
+          header="Logging"
+          footer={`Entries made before ${formatHm12(boundary)} count toward the previous day, so late-night logs land on the right date.`}
+        >
+          <Row label="Day boundary" last>
+            <TimePickerField value={boundary} onChange={onBoundaryChange} />
+          </Row>
+        </Group>
+
+        <Group header="Data">
+          <Row label="Topics tracked">
+            <Text style={styles.dataMuted}>{topicCount}</Text>
+          </Row>
+          <Row label="Storage" last>
+            <Text style={styles.dataMuted}>On device · offline</Text>
+          </Row>
+        </Group>
+
+        <Text style={styles.version}>Journalo · v2.0</Text>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.paper },
+  container: { flex: 1, backgroundColor: 'transparent' },
 
-  kicker: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    letterSpacing: 1.5,
-    color: theme.muted,
-    marginBottom: 7,
-  },
-  title: {
+  scrollBody: { paddingHorizontal: 16, paddingBottom: 120 },
+  header: { paddingTop: 64, marginBottom: 22 },
+  kicker: { fontFamily: fonts.sans, fontSize: 11.5, fontWeight: '600', letterSpacing: 1, color: theme.label2, marginBottom: 6 },
+  title: { fontFamily: fonts.sans, fontSize: 34, fontWeight: '700', letterSpacing: -0.6, color: theme.ink },
+
+  group: { marginBottom: 22 },
+  groupHeader: {
     fontFamily: fonts.sans,
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -0.8,
-    color: theme.ink,
-  },
-
-  scrollBody: { paddingHorizontal: 18, paddingBottom: 120 },
-
-  sectionLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 1.2,
-    color: theme.muted,
-    paddingTop: 22,
+    fontSize: 11.5,
+    fontWeight: '600',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: theme.label2,
+    paddingHorizontal: 18,
     paddingBottom: 8,
   },
-  sectionLabelFirst: { paddingTop: 8 },
+  groupCard: {
+    shadowColor: 'rgba(28,38,78,1)',
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 8 },
+  },
+  groupFooter: {
+    fontFamily: fonts.sans,
+    fontSize: 11.5,
+    lineHeight: 17,
+    color: theme.label2,
+    paddingHorizontal: 18,
+    paddingTop: 8,
+  },
 
   disabled: { opacity: 0.4 },
 
-  fieldRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    paddingVertical: 15,
-    borderBottomWidth: 1.5,
-    borderBottomColor: theme.rule,
+    minHeight: 52,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
-  fieldRowLast: { borderBottomWidth: 0 },
-  fieldLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 12,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    color: theme.muted,
-    flexShrink: 1,
-  },
-  fieldControl: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 },
+  rowLabel: { fontFamily: fonts.sans, fontSize: 16, letterSpacing: -0.3, color: theme.ink, flexShrink: 1 },
+  rowControl: { flexDirection: 'row', alignItems: 'center', gap: 10, flexShrink: 0 },
+  // Hairline between rows, inset from the left to align under the label (iOS grouped-list style).
+  rowDivider: { position: 'absolute', left: 16, right: 0, bottom: 0, height: StyleSheet.hairlineWidth, backgroundColor: theme.label4 },
 
-  note: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    lineHeight: 18,
-    color: theme.muted,
-    marginTop: 12,
-  },
+  dataMuted: { fontFamily: fonts.sans, fontSize: 15, color: theme.label2 },
 
-  dataValue: { fontFamily: fonts.mono, fontSize: 13, fontWeight: '700', color: theme.ink },
-  dataMuted: { fontFamily: fonts.mono, fontSize: 12, color: theme.muted },
+  version: { fontFamily: fonts.sans, fontSize: 11.5, color: theme.label3, textAlign: 'center', marginTop: 4 },
 
-  // Toggle: 52×30 track with a 22×22 knob inset 2px on the matching side.
-  toggleTrack: {
-    width: 52,
-    height: 30,
-    borderWidth: 1.5,
-    borderColor: theme.ink,
-    borderRadius: theme.radius,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
+  // iOS-style toggle: 51×31 track, 27px knob, knob springs 20px across.
+  track: { width: 51, height: 31, borderRadius: 999, padding: 2, justifyContent: 'center' },
+  knob: {
+    width: 27,
+    height: 27,
+    borderRadius: 999,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
   },
-  toggleTrackOn: { backgroundColor: theme.ink },
-  toggleKnob: {
-    position: 'absolute',
-    top: 2,
-    width: 22,
-    height: 22,
-  },
-  toggleKnobOff: { left: 2, backgroundColor: theme.ink },
-  toggleKnobOn: { left: 24, backgroundColor: theme.paper },
 });
