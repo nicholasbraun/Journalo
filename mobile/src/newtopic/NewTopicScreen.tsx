@@ -15,11 +15,7 @@ import type { Scale } from '@journal/core';
 import { buildRamp } from '../ui/colorRamp';
 import { GlassSurface } from '../ui/GlassSurface';
 import { DEFAULT_TOPIC_COLOR, TOPIC_COLORS } from '../ui/palette';
-import { ScreenHeader } from '../ui/ScreenHeader';
 import { fonts, theme } from '../ui/theme';
-
-// First-paint estimate for the floating header; corrected by onLayout (see QuickLogScreen).
-const HEADER_ESTIMATE = 112;
 
 // The New Topic screen: name + color is the whole fast path; scale customization is
 // tucked behind a disclosure so a topic is creatable in two taps (ARCHITECTURE.md §3).
@@ -91,11 +87,12 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
     });
   };
 
-  const [headerHeight, setHeaderHeight] = useState(HEADER_ESTIMATE);
-
   return (
     <View style={styles.container}>
-      <ScreenHeader onHeightChange={setHeaderHeight} contentStyle={styles.headerRow}>
+      {/* A plain paper header row (no glass bar): only the close/create discs are glass.
+          It sits above the scroll region rather than floating over it, so it stays fixed
+          while the form scrolls without a glass material to refract the content beneath. */}
+      <View style={styles.header}>
         <GlassSurface
           radius={theme.capsule}
           isInteractive
@@ -130,7 +127,7 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
             <Text style={styles.glassGlyph}>＋</Text>
           </Pressable>
         </GlassSurface>
-      </ScreenHeader>
+      </View>
 
       <KeyboardAvoidingView
         style={styles.keyboardView}
@@ -139,7 +136,7 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={[styles.body, { paddingTop: headerHeight }]}
+          contentContainerStyle={styles.body}
           keyboardShouldPersistTaps="handled"
         >
         {/* NAME — the only required free-text field. */}
@@ -265,9 +262,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.paper },
   keyboardView: { flex: 1 },
 
-  // Header chrome (notch inset, padding, hairline) lives in ScreenHeader; this only lays
-  // out the row: cancel button, kicker, create button.
-  headerRow: {
+  // Plain paper header: 56px top clears the iOS notch/status bar without a safe-area
+  // dependency (the value ScreenHeader used), a hairline rule separates it from the form,
+  // and the row lays out cancel disc, kicker, create disc.
+  header: {
+    paddingTop: 56,
+    paddingHorizontal: 18,
+    paddingBottom: 14,
+    borderBottomWidth: 1.5,
+    borderBottomColor: theme.rule,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
