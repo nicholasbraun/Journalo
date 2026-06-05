@@ -10,40 +10,30 @@ import {
   View,
 } from 'react-native';
 
-import { LinearGradient } from 'expo-linear-gradient';
-
 import type { Scale } from '@journal/core';
 
 import { buildRamp } from '../ui/colorRamp';
-import { GlassSurface } from '../ui/GlassSurface';
+import { Chevron, IconCheck, IconClose } from '../ui/icons';
 import { DEFAULT_TOPIC_COLOR, TOPIC_COLORS } from '../ui/palette';
+import { SvgMesh } from '../ui/SvgMesh';
 import { fonts, theme } from '../ui/theme';
 
-// The floating header's height (18 top inset + 44 disc + 14 below). Deterministic
-// because the discs are fixed-size, so the scroll region can reserve it as top padding
-// without measuring. The form's first section then begins just below the discs.
-const HEADER_HEIGHT = 76;
+// The floating header's height (18 top inset + 34 disc + 12 below). The discs are fixed-size,
+// so the scroll region reserves this as top padding without measuring.
+const HEADER_HEIGHT = 72;
 
-// `theme.paper` (#F4F1E9) at zero alpha — the clear end of the top fade. The scrim runs
-// from solid paper at the very top edge to this, so content scrolling up dissolves into
-// the paper near the status bar instead of clipping hard, while staying visible (and thus
-// refractable by the glass discs) lower down.
-const PAPER_CLEAR = 'rgba(244,241,233,0)';
+// The New Topic screen: name + color is the whole fast path; scale customization is tucked
+// behind a disclosure so a topic is creatable in two taps (ARCHITECTURE.md §3). On submit it
+// hands the assembled topic up via `onCreate`; the shell mints the ids and appends the
+// TopicCreated event. This screen owns only its draft form state.
 
-// The New Topic screen: name + color is the whole fast path; scale customization is
-// tucked behind a disclosure so a topic is creatable in two taps (ARCHITECTURE.md §3).
-// On submit it hands the assembled topic up via `onCreate`; the shell mints the ids
-// and appends the TopicCreated event. This screen owns only its draft form state.
-
-// The level counts the scale control offers. Granularity is FIXED at creation
-// (CLAUDE.md invariant 5) — there is no later event to change it — so this is the one
-// and only place a topic's `levels` is decided. The design caps the choice at 2..5.
+// The level counts the scale control offers. Granularity is FIXED at creation (CLAUDE.md
+// invariant 5) — there is no later event to change it — so this is the one and only place a
+// topic's `levels` is decided. The design caps the choice at 2..5.
 const LEVEL_OPTIONS = [2, 3, 4, 5] as const;
 
-// Generic per-level labels seeded for each granularity (the design's DEFAULT_LEVELS).
-// "Generic labels the user can rename but doesn't have to" (ARCHITECTURE.md §3): every
-// topic ships with words so the fast path needs no label typing, and the quick-log
-// selector shows something more meaningful than bare numbers.
+// Generic per-level labels seeded for each granularity (the design's DEFAULT_LEVELS): every
+// topic ships with words so the fast path needs no label typing.
 const DEFAULT_LABELS: Readonly<Record<number, readonly string[]>> = {
   2: ['no', 'yes'],
   3: ['low', 'mid', 'high'],
@@ -63,9 +53,8 @@ type Props = {
 
 export function NewTopicScreen({ onCreate, onCancel }: Props) {
   const [name, setName] = useState('');
-  // A topic requires a color, so one is pre-selected. This is a display default, NOT
-  // the "nothing pre-selected" logging invariant — that governs day VALUES, not a
-  // topic's color (CLAUDE.md invariant 2).
+  // A topic requires a color, so one is pre-selected. This is a display default, NOT the
+  // "nothing pre-selected" logging invariant — that governs day VALUES (CLAUDE.md invariant 2).
   const [color, setColor] = useState(DEFAULT_TOPIC_COLOR);
   const [levels, setLevels] = useState<number>(DEFAULT_LEVELS);
   const [labels, setLabels] = useState<string[]>([...DEFAULT_LABELS[DEFAULT_LEVELS]]);
@@ -73,8 +62,8 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
 
   const ramp = buildRamp(color, levels);
 
-  // Switch granularity, keeping any non-blank labels the user already typed and
-  // filling the rest from the default word-set for the new count.
+  // Switch granularity, keeping any non-blank labels the user already typed and filling the
+  // rest from the default word-set for the new count.
   const setLevelCount = (n: number) => {
     setLabels((prev) => DEFAULT_LABELS[n].map((d, i) => (prev[i]?.trim() ? prev[i] : d)));
     setLevels(n);
@@ -84,212 +73,167 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
     setLabels((prev) => prev.map((x, j) => (j === i ? text : x)));
 
   const trimmedName = name.trim();
-  // Create stays blocked until the name and EVERY label are non-blank: labels are
-  // always stored, so a blank one would be a malformed scale. Blocking (rather than
-  // silently substituting a placeholder) keeps stored data honest — "malformed scales
-  // impossible to create".
+  // Create stays blocked until the name and EVERY label are non-blank: labels are always
+  // stored, so a blank one would be a malformed scale.
   const labelsComplete = labels.every((l) => l.trim().length > 0);
   const canCreate = trimmedName.length > 0 && labelsComplete;
 
   const submit = () => {
     if (!canCreate) return;
-    onCreate({
-      name: trimmedName,
-      color,
-      scale: { levels, labels: labels.map((l) => l.trim()) },
-    });
+    onCreate({ name: trimmedName, color, scale: { levels, labels: labels.map((l) => l.trim()) } });
   };
 
   return (
     <View style={styles.container}>
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        // The fixed header sits outside this view, so on iOS we pad only the scroll
-        // region by the keyboard height; Android's adjustResize handles it natively.
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <SvgMesh />
+      <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={[styles.body, { paddingTop: HEADER_HEIGHT }]}
           keyboardShouldPersistTaps="handled"
         >
-        {/* NAME — the only required free-text field. */}
-        <View style={styles.section}>
+          {/* NAME — the only required free-text field. */}
           <Text style={styles.fieldLabel}>NAME</Text>
           <TextInput
             value={name}
             onChangeText={setName}
-            placeholder="e.g. Headache"
-            placeholderTextColor={theme.muted}
+            placeholder="e.g. Anxiety"
+            placeholderTextColor={theme.label3}
             autoFocus
             style={styles.nameInput}
           />
-        </View>
 
-        {/* COLOR — pick one of the palette swatches; one is always selected. */}
-        <View style={styles.section}>
-          <Text style={styles.fieldLabel}>COLOR</Text>
+          {/* COLOR — pick one of the palette swatches; one is always selected. */}
+          <Text style={[styles.fieldLabel, styles.sectionGap]}>COLOR</Text>
           <View style={styles.swatchRow}>
-            {TOPIC_COLORS.map((c) => (
-              <Pressable
-                key={c}
-                onPress={() => setColor(c)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: c === color }}
-                style={[
-                  styles.swatch,
-                  { backgroundColor: c },
-                  c === color ? styles.swatchSelected : styles.swatchUnselected,
-                ]}
-              />
-            ))}
+            {TOPIC_COLORS.map((c) => {
+              const selected = c === color;
+              return (
+                <Pressable
+                  key={c}
+                  onPress={() => setColor(c)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  style={[
+                    styles.swatch,
+                    { backgroundColor: c, transform: [{ scale: selected ? 1 : 0.86 }] },
+                    selected && { shadowColor: c, shadowOpacity: 0.5, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
+                  ]}
+                >
+                  {selected && <IconCheck size={15} color="#fff" />}
+                </Pressable>
+              );
+            })}
           </View>
-        </View>
 
-        {/* SCALE PREVIEW — a non-interactive ramp strip (NOT the quick-log selector):
-            the same buildRamp the topic will use, rendered pale→dark so the user sees
-            what the chosen color/granularity looks like before committing. */}
-        <View style={styles.section}>
-          <Text style={styles.previewLabel}>SCALE PREVIEW · pale → dark</Text>
+          {/* SCALE PREVIEW — a non-interactive ramp strip (NOT the quick-log selector): the
+              same buildRamp the topic will use, rendered pale→dark with its labels. */}
+          <Text style={[styles.fieldLabel, styles.sectionGap]}>SCALE PREVIEW · PALE → DARK</Text>
           <View style={styles.previewStrip}>
             {Array.from({ length: levels }, (_, rank) => (
-              <View
-                key={rank}
-                style={[
-                  styles.previewSegment,
-                  { backgroundColor: ramp.fill(rank) },
-                  rank > 0 && styles.previewSegmentDivider,
-                ]}
-              />
+              <View key={rank} style={[styles.previewSegment, { backgroundColor: ramp.fill(rank) }]}>
+                <Text numberOfLines={1} style={[styles.previewLabel, { color: ramp.textOn(rank) }]}>
+                  {labels[rank]}
+                </Text>
+              </View>
             ))}
           </View>
-        </View>
 
-        {/* ADVANCED — granularity + labels, collapsed by default and off the fast path. */}
-        <Pressable
-          onPress={() => setAdvancedOpen((open) => !open)}
-          accessibilityRole="button"
-          style={styles.disclosure}
-        >
-          <Text style={styles.disclosureChevron}>{advancedOpen ? '⌄' : '›'}</Text>
-          <Text style={styles.disclosureLabel}>ADVANCED · CUSTOMIZE SCALE</Text>
-        </Pressable>
-
-        {advancedOpen && (
-          <View style={styles.advanced}>
-            <Text style={styles.advancedNote}>Levels can't change after a topic is created.</Text>
-
-            <View style={styles.levelsRow}>
-              <Text style={styles.fieldLabel}>LEVELS</Text>
-              <View style={styles.levelsControl}>
-                {LEVEL_OPTIONS.map((n, idx) => {
-                  const selected = levels === n;
-                  return (
-                    <Pressable
-                      key={n}
-                      onPress={() => setLevelCount(n)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                      style={[
-                        styles.levelOption,
-                        idx > 0 && styles.levelOptionDivider,
-                        selected && styles.levelOptionSelected,
-                      ]}
-                    >
-                      <Text style={[styles.levelOptionLabel, selected && styles.levelOptionLabelSelected]}>
-                        {n}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+          {/* ADVANCED — granularity + labels, collapsed by default and off the fast path. */}
+          <Pressable
+            onPress={() => setAdvancedOpen((open) => !open)}
+            accessibilityRole="button"
+            style={styles.disclosure}
+          >
+            <View style={{ transform: [{ rotate: advancedOpen ? '90deg' : '0deg' }] }}>
+              <Chevron dir="right" size={14} color={theme.label2} />
             </View>
+            <Text style={styles.disclosureLabel}>CUSTOMIZE SCALE</Text>
+          </Pressable>
 
-            <View style={styles.labelList}>
-              {labels.map((label, i) => (
-                <View key={i} style={styles.labelItem}>
-                  <View style={[styles.labelSwatch, { backgroundColor: ramp.fill(i) }]} />
-                  <Text style={styles.labelIndex}>{i + 1}</Text>
-                  <TextInput
-                    value={label}
-                    onChangeText={(text) => setLabelAt(i, text)}
-                    placeholder={`level ${i + 1}`}
-                    placeholderTextColor={theme.muted}
-                    style={styles.labelInput}
-                  />
+          {advancedOpen && (
+            <View>
+              <Text style={styles.advancedNote}>Levels can't change after a topic is created.</Text>
+
+              <View style={styles.levelsRow}>
+                <Text style={styles.fieldLabel}>LEVELS</Text>
+                <View style={styles.levelsControl}>
+                  {LEVEL_OPTIONS.map((n) => {
+                    const selected = levels === n;
+                    return (
+                      <Pressable
+                        key={n}
+                        onPress={() => setLevelCount(n)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        style={[styles.levelOption, selected && styles.levelOptionSelected]}
+                      >
+                        <Text style={[styles.levelOptionLabel, selected && styles.levelOptionLabelSelected]}>{n}</Text>
+                      </Pressable>
+                    );
+                  })}
                 </View>
-              ))}
-            </View>
+              </View>
 
-            {!labelsComplete && (
-              <Text style={styles.validationNote}>Every level needs a label.</Text>
-            )}
-          </View>
-        )}
+              <View style={styles.labelList}>
+                {labels.map((label, i) => (
+                  <View key={i} style={styles.labelItem}>
+                    <View style={[styles.labelSwatch, { backgroundColor: ramp.fill(i) }]} />
+                    <TextInput
+                      value={label}
+                      onChangeText={(text) => setLabelAt(i, text)}
+                      placeholder={`level ${i + 1}`}
+                      placeholderTextColor={theme.label3}
+                      style={styles.labelInput}
+                    />
+                  </View>
+                ))}
+              </View>
+
+              {!labelsComplete && <Text style={styles.validationNote}>Every level needs a label.</Text>}
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Top fade: solid paper at the very edge fading to clear, so content scrolling up
-          dissolves into the paper near the status bar instead of clipping hard. Sits above
-          the scroll but below the header; non-interactive so it never blocks the form. */}
-      <LinearGradient
-        colors={[theme.paper, theme.paper, PAPER_CLEAR]}
-        locations={[0, 0.4, 1]}
-        pointerEvents="none"
-        style={styles.topFade}
-      />
-
-      {/* The floating header: transparent (no bar) and rendered last so it sits above the
-          scroll content — the content (and the fade) pass UNDER the glass discs, which
-          refract them. Only the discs are liquid glass. */}
+      {/* Floating header: a grabber + close/title/create. Close is a neutral disc; Create
+          fills with the chosen topic color once the form is valid (the design's colored
+          check button), so the action previews the topic's identity. */}
       <View style={styles.header}>
-        <GlassSurface
-          radius={theme.capsule}
-          isInteractive
-          glassEffectStyle="clear"
-          style={styles.glassBtn}
-          fallbackStyle={styles.glassBtnFallback}
+        <Pressable
+          onPress={onCancel}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
+          style={({ pressed }) => [styles.disc, styles.closeDisc, pressed && styles.pressed]}
         >
-          <Pressable
-            onPress={onCancel}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel"
-            style={styles.glassBtnPress}
-          >
-            <Text style={styles.glassGlyph}>✕</Text>
-          </Pressable>
-        </GlassSurface>
-        <Text style={styles.kicker}>NEW TOPIC</Text>
-        <GlassSurface
-          radius={theme.capsule}
-          isInteractive
-          glassEffectStyle="clear"
-          style={[styles.glassBtn, !canCreate && styles.glassBtnDisabled]}
-          fallbackStyle={styles.glassBtnFallback}
+          <IconClose size={16} color={theme.label2} />
+        </Pressable>
+        <Text style={styles.headerTitle}>New topic</Text>
+        <Pressable
+          onPress={submit}
+          disabled={!canCreate}
+          accessibilityRole="button"
+          accessibilityLabel="Create"
+          style={({ pressed }) => [
+            styles.disc,
+            canCreate
+              ? { backgroundColor: color, shadowColor: color, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }
+              : styles.createDiscDisabled,
+            pressed && canCreate && styles.pressed,
+          ]}
         >
-          <Pressable
-            onPress={submit}
-            disabled={!canCreate}
-            accessibilityRole="button"
-            accessibilityLabel="Create"
-            style={styles.glassBtnPress}
-          >
-            <Text style={styles.glassGlyph}>＋</Text>
-          </Pressable>
-        </GlassSurface>
+          <IconCheck size={17} color={canCreate ? '#fff' : theme.label3} />
+        </Pressable>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.paper },
+  container: { flex: 1, backgroundColor: 'transparent' },
   keyboardView: { flex: 1 },
 
-  // Floating, transparent header: pinned to the top so the form scrolls UNDER it and the
-  // glass discs refract that content. No background and no rule — the top fade (below)
-  // provides the separation; a hard bar or border would defeat the whole point. The top
-  // inset equals the horizontal one (18) so the discs are evenly margined from the modal's
-  // top and side edges — no notch to clear, since this is a modal sheet below the status bar.
+  // Floating, transparent header pinned to the modal's top (no notch to clear — a sheet sits
+  // below the status bar). The form scrolls under the discs.
   header: {
     position: 'absolute',
     top: 0,
@@ -298,184 +242,82 @@ const styles = StyleSheet.create({
     zIndex: 10,
     paddingTop: 18,
     paddingHorizontal: 18,
-    paddingBottom: 14,
+    paddingBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  // The scrim that fades scrolled content into the paper at the top edge. Spans the header
-  // band; `colors`/`locations` (set inline) keep it solid paper across the status bar then
-  // clear by the bottom, so content stays visible — and refractable — behind the discs.
-  topFade: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: HEADER_HEIGHT,
-  },
-  // Close / Create are clear-glass circular icon buttons (iOS Weather style). A faint
-  // hairline ring — NOT the hard ink panel border — lets the untinted glass read against
-  // the pale paper, the same thin stroke the Weather controls carry; the ring lives in
-  // `style` so it shows on both the glass and solid-paper-fallback paths.
-  glassBtn: {
-    width: 44,
-    height: 44,
-    borderWidth: 1,
-    borderColor: theme.hair,
-    overflow: 'hidden',
-  },
-  // Pressable fills the whole circle so the entire glass disc is the tap target.
-  glassBtnPress: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // Create stays dimmed until the form is valid (mirrors the old createBtnDisabled).
-  glassBtnDisabled: { opacity: 0.35 },
-  // The fallback disc gets a faint fill so it reads as a circle on Android / pre-iOS-26,
-  // where there is no glass material to define its edge.
-  glassBtnFallback: { backgroundColor: theme.field },
-  glassGlyph: { fontFamily: fonts.sans, fontSize: 18, color: theme.ink, lineHeight: 22 },
-  kicker: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    letterSpacing: 1.5,
-    color: theme.muted,
-  },
+  headerTitle: { fontFamily: fonts.sans, fontSize: 17, fontWeight: '600', letterSpacing: -0.3, color: theme.ink },
+  disc: { width: 34, height: 34, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  closeDisc: { backgroundColor: 'rgba(120,120,128,0.16)' },
+  createDiscDisabled: { backgroundColor: 'rgba(120,120,128,0.2)' },
+  pressed: { opacity: 0.7 },
 
   body: { paddingHorizontal: 18, paddingBottom: 60 },
-  section: { paddingTop: 20 },
+  sectionGap: { marginTop: 22 },
 
   fieldLabel: {
-    fontFamily: fonts.mono,
+    fontFamily: fonts.sans,
     fontSize: 11,
-    letterSpacing: 1.2,
-    color: theme.muted,
+    fontWeight: '600',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: theme.label2,
     marginBottom: 10,
   },
   nameInput: {
     fontFamily: fonts.sans,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
+    letterSpacing: -0.4,
     color: theme.ink,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: theme.field,
-    borderWidth: 1.5,
-    borderColor: theme.ink,
-    borderRadius: theme.radius,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.glassEdge,
   },
 
-  swatchRow: { flexDirection: 'row', gap: 7 },
-  swatch: {
-    flex: 1,
-    aspectRatio: 1,
-    borderRadius: theme.radius,
-  },
-  swatchSelected: { borderWidth: 2.5, borderColor: theme.ink },
-  swatchUnselected: { borderWidth: 1.5, borderColor: theme.hair },
+  swatchRow: { flexDirection: 'row', gap: 8 },
+  swatch: { flex: 1, aspectRatio: 1, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
 
-  previewLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 10,
-    letterSpacing: 0.4,
-    color: theme.muted,
-    marginBottom: 8,
-  },
-  previewStrip: {
-    flexDirection: 'row',
-    borderWidth: 1.5,
-    borderColor: theme.ink,
-    borderRadius: theme.radius,
-    overflow: 'hidden',
-  },
-  previewSegment: { flex: 1, minHeight: 44 },
-  previewSegmentDivider: { borderLeftWidth: 1, borderLeftColor: theme.hair },
+  previewStrip: { flexDirection: 'row', gap: 5 },
+  previewSegment: { flex: 1, height: 44, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  previewLabel: { fontFamily: fonts.sans, fontSize: 10.5, fontWeight: '600' },
 
-  disclosure: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    marginTop: 6,
-  },
-  disclosureChevron: {
-    fontFamily: fonts.sans,
-    fontSize: 16,
-    color: theme.ink,
-    width: 14,
-    textAlign: 'center',
-  },
-  disclosureLabel: {
-    fontFamily: fonts.mono,
-    fontSize: 11,
-    letterSpacing: 1.2,
-    color: theme.ink,
-  },
+  disclosure: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 22, paddingVertical: 6 },
+  disclosureLabel: { fontFamily: fonts.sans, fontSize: 11, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', color: theme.ink },
 
-  advanced: {
-    borderTopWidth: 1.5,
-    borderTopColor: theme.rule,
-    paddingTop: 16,
+  advancedNote: { fontFamily: fonts.sans, fontSize: 11.5, color: theme.label2, marginBottom: 14, paddingTop: 6 },
+  levelsRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 },
+  levelsControl: { flexDirection: 'row', gap: 4, backgroundColor: 'rgba(120,120,128,0.12)', borderRadius: 11, padding: 3 },
+  levelOption: { width: 38, height: 32, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  levelOptionSelected: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
   },
-  advancedNote: {
-    fontFamily: fonts.mono,
-    fontSize: 10.5,
-    color: theme.muted,
-    marginBottom: 16,
-    lineHeight: 15,
-  },
-  levelsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  levelsControl: {
-    flexDirection: 'row',
-    borderWidth: 1.5,
-    borderColor: theme.ink,
-    borderRadius: theme.radius,
-    overflow: 'hidden',
-  },
-  levelOption: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'transparent',
-  },
-  levelOptionDivider: { borderLeftWidth: 1.5, borderLeftColor: theme.ink },
-  levelOptionSelected: { backgroundColor: theme.ink },
-  levelOptionLabel: { fontFamily: fonts.mono, fontSize: 13, fontWeight: '700', color: theme.ink },
-  levelOptionLabelSelected: { color: theme.paper },
+  levelOptionLabel: { fontFamily: fonts.sans, fontSize: 14, fontWeight: '700', color: theme.label2 },
+  levelOptionLabelSelected: { color: theme.ink },
 
-  labelList: { paddingTop: 16, gap: 9 },
+  labelList: { gap: 8 },
   labelItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  labelSwatch: {
-    width: 22,
-    height: 22,
-    borderWidth: 1,
-    borderColor: theme.hair,
-    flexShrink: 0,
-  },
-  labelIndex: { fontFamily: fonts.mono, fontSize: 10, color: theme.muted, width: 14 },
+  labelSwatch: { width: 22, height: 22, borderRadius: 7, flexShrink: 0 },
   labelInput: {
     flex: 1,
-    fontFamily: fonts.mono,
-    fontSize: 13,
+    fontFamily: fonts.sans,
+    fontSize: 14,
     color: theme.ink,
-    paddingHorizontal: 11,
+    paddingHorizontal: 12,
     paddingVertical: 9,
-    backgroundColor: theme.field,
-    borderWidth: 1.5,
-    borderColor: theme.ink,
-    borderRadius: theme.radius,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: theme.glassEdge,
   },
 
-  validationNote: {
-    fontFamily: fonts.mono,
-    fontSize: 10.5,
-    color: theme.muted,
-    marginTop: 12,
-  },
+  validationNote: { fontFamily: fonts.sans, fontSize: 11.5, color: theme.label2, marginTop: 12 },
 });
