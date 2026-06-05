@@ -13,6 +13,7 @@ import {
 import type { Scale } from '@journal/core';
 
 import { buildRamp } from '../ui/colorRamp';
+import { GlassSurface } from '../ui/GlassSurface';
 import { Chevron, IconCheck, IconClose } from '../ui/icons';
 import { DEFAULT_TOPIC_COLOR, TOPIC_COLORS } from '../ui/palette';
 import { SvgMesh } from '../ui/SvgMesh';
@@ -195,34 +196,37 @@ export function NewTopicScreen({ onCreate, onCancel }: Props) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      {/* Floating header: a grabber + close/title/create. Close is a neutral disc; Create
-          fills with the chosen topic color once the form is valid (the design's colored
-          check button), so the action previews the topic's identity. */}
+      {/* Floating header: close / title / create, as Liquid Glass discs. Close carries a
+          neutral glyph; Create's check takes the chosen topic color once the form is valid
+          (and dims when not), so the action previews the topic's identity through the glass. */}
       <View style={styles.header}>
-        <Pressable
-          onPress={onCancel}
-          accessibilityRole="button"
-          accessibilityLabel="Cancel"
-          style={({ pressed }) => [styles.disc, styles.closeDisc, pressed && styles.pressed]}
-        >
-          <IconClose size={16} color={theme.label2} />
-        </Pressable>
+        <GlassSurface radius={999} isInteractive glassEffectStyle="clear" style={styles.disc}>
+          <Pressable
+            onPress={onCancel}
+            accessibilityRole="button"
+            accessibilityLabel="Cancel"
+            style={({ pressed }) => [styles.discPress, pressed && styles.pressed]}
+          >
+            <IconClose size={16} color={theme.label2} />
+          </Pressable>
+        </GlassSurface>
         <Text style={styles.headerTitle}>New topic</Text>
-        <Pressable
-          onPress={submit}
-          disabled={!canCreate}
-          accessibilityRole="button"
-          accessibilityLabel="Create"
-          style={({ pressed }) => [
-            styles.disc,
-            canCreate
-              ? { backgroundColor: color, shadowColor: color, shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } }
-              : styles.createDiscDisabled,
-            pressed && canCreate && styles.pressed,
-          ]}
+        <GlassSurface
+          radius={999}
+          isInteractive
+          glassEffectStyle="clear"
+          style={[styles.disc, !canCreate && styles.discDim]}
         >
-          <IconCheck size={17} color={canCreate ? '#fff' : theme.label3} />
-        </Pressable>
+          <Pressable
+            onPress={submit}
+            disabled={!canCreate}
+            accessibilityRole="button"
+            accessibilityLabel="Create"
+            style={({ pressed }) => [styles.discPress, pressed && canCreate && styles.pressed]}
+          >
+            <IconCheck size={17} color={canCreate ? color : theme.label3} />
+          </Pressable>
+        </GlassSurface>
       </View>
     </View>
   );
@@ -248,9 +252,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerTitle: { fontFamily: fonts.sans, fontSize: 17, fontWeight: '600', letterSpacing: -0.3, color: theme.ink },
-  disc: { width: 34, height: 34, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
-  closeDisc: { backgroundColor: 'rgba(120,120,128,0.16)' },
-  createDiscDisabled: { backgroundColor: 'rgba(120,120,128,0.2)' },
+  // Liquid Glass discs (sized here; the inner Pressable fills and centers the glyph).
+  disc: { width: 34, height: 34 },
+  discPress: { width: 34, height: 34, alignItems: 'center', justifyContent: 'center' },
+  discDim: { opacity: 0.5 },
   pressed: { opacity: 0.7 },
 
   body: { paddingHorizontal: 18, paddingBottom: 60 },

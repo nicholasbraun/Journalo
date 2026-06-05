@@ -241,17 +241,16 @@ export function QuickLogScreen({ state, loggingDate, dateLabel, onSet, onNewTopi
         )}
       </ScrollView>
 
-      {/* The standing "new topic" action: a floating accent glass disc bottom-right, above
+      {/* The standing "new topic" action: a floating Liquid Glass disc bottom-right, above
           the native tab bar. Icon-only "+", deliberately kept in its current position (not a
-          tab-bar FAB). On iOS 26 it is accent-tinted Liquid Glass; the fallback fills accent. */}
+          tab-bar FAB). Clear glass (translucent, refracting the mesh) with an accent glyph,
+          rather than a solid accent fill. */}
       {!isEmpty && (
         <GlassSurface
           radius={theme.rChip}
           isInteractive
-          tintColor={theme.accent}
+          glassEffectStyle="clear"
           style={styles.fab}
-          fallbackStyle={styles.fabFallback}
-          noEdge
         >
           <Pressable
             onPress={onNewTopic}
@@ -259,7 +258,7 @@ export function QuickLogScreen({ state, loggingDate, dateLabel, onSet, onNewTopi
             accessibilityLabel="New topic"
             style={({ pressed }) => [styles.fabPress, pressed && styles.pressed]}
           >
-            <IconPlus size={26} color="#fff" strokeWidth={2.6} />
+            <IconPlus size={26} color={theme.accent} strokeWidth={2.6} />
           </Pressable>
         </GlassSurface>
       )}
@@ -344,7 +343,7 @@ const styles = StyleSheet.create({
   newTopicSolid: { paddingHorizontal: 22, paddingVertical: 14, backgroundColor: theme.accent, borderRadius: theme.rChip },
   newTopicSolidLabel: { fontFamily: fonts.sans, fontSize: 15, fontWeight: '700', letterSpacing: 0.2, color: '#fff' },
 
-  // Floating accent "+" disc.
+  // Floating Liquid Glass "+" disc with a soft drop shadow so it lifts off the content.
   fab: {
     position: 'absolute',
     right: 18,
@@ -353,11 +352,10 @@ const styles = StyleSheet.create({
     height: 58,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: theme.accent,
-    shadowOpacity: 0.4,
+    shadowColor: 'rgba(28,38,78,1)',
+    shadowOpacity: 0.18,
     shadowRadius: 14,
     shadowOffset: { width: 0, height: 8 },
   },
-  fabFallback: { backgroundColor: theme.accent },
   fabPress: { width: 58, height: 58, alignItems: 'center', justifyContent: 'center' },
 });
