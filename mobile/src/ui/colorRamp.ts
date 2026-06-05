@@ -17,13 +17,13 @@ type RGB = { readonly r: number; readonly g: number; readonly b: number };
 const WHITE: RGB = { r: 255, g: 255, b: 255 };
 
 // Lowest rank still tints this far toward the full color, so it is a pale wash of the
-// topic hue rather than washing out to white/grey. Mirrors the design's 0.18 floor.
-const TINT_FLOOR = 0.18;
+// topic hue rather than washing out to white/grey. Mirrors the design's 0.20 floor.
+const TINT_FLOOR = 0.2;
 
 // Below this perceived luminance the fill is dark enough to need light text on it.
-const LIGHT_TEXT_THRESHOLD = 0.6;
-const ON_DARK = '#F4F1E9'; // paper-colored text on a dark fill
-const ON_LIGHT = '#16140E'; // ink text on a light fill
+const LIGHT_TEXT_THRESHOLD = 0.62;
+const ON_DARK = '#FFFFFF'; // white text on a dark fill (clean SF-style, matches the design)
+const ON_LIGHT = '#15171C'; // ink text on a light fill
 
 function parseHex(hex: string): RGB {
   const h = hex.replace('#', '');
