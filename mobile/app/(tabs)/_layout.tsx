@@ -3,13 +3,13 @@ import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { theme } from '../../src/ui/theme';
 
 // The bottom-tab group rendered by iOS's native UITabBar — Liquid Glass on iOS 26,
-// the standard native bar on iOS 16-18 — rather than a JS-drawn brutalist bar. Triggers
-// map 1:1 to the route files under (tabs)/ ("index" = Today). Selected tint is brand ink
-// for continuity with the rest of the shell; the bar minimizes on scroll-down (iOS 26).
-// SF Symbols mirror the retired custom icons' motifs (check / 3x3 grid / sliders).
+// the standard native bar on iOS 16-18 — rather than a JS-drawn bar. Triggers map 1:1 to
+// the route files under (tabs)/ ("index" = Today). Selected tint is the app accent for
+// continuity with the glass chrome; the bar minimizes on scroll-down (iOS 26). SF Symbols
+// stay as the tab icons (deliberately native — not the design prototype's custom icons).
 export default function TabsLayout() {
   return (
-    <NativeTabs tintColor={theme.ink} minimizeBehavior="onScrollDown">
+    <NativeTabs tintColor={theme.accent} minimizeBehavior="onScrollDown">
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon sf="checkmark.square.fill" md="check_box" />
         <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>

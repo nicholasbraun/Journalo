@@ -6,9 +6,9 @@ import { SettingsProvider } from '../src/settings/SettingsProvider';
 
 // The router root. It owns no screen — it mounts the app's providers once around the whole
 // route tree (so every screen reads the same fold and settings) and declares the two
-// top-level destinations: the tab group and the New Topic modal. This replaces the old
-// App.tsx, which was both the state holder and a manual screen toggle; that responsibility
-// now splits — state into the providers, routing into the file tree.
+// top-level destinations: the tab group and the New Topic modal. Each screen paints its own
+// gradient-mesh background (the tab navigator paints opaque, so a root-level mesh would be
+// hidden — see QuickLogScreen).
 //
 // SettingsProvider wraps JournalProvider because the journal reads the logging-day boundary
 // from settings (it decides which date new values land on) — so settings must be available
