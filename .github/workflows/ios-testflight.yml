@@ -5,19 +5,18 @@
 # and spends another EAS build). Run ios-submit.yml instead to submit the
 # already-finished build.
 #
-# Required GitHub secrets:
-#   EXPO_TOKEN          — expo.dev → Account Settings → Access Tokens
-#   ASC_APP_ID          — App Store Connect app's numeric Apple ID (App Store
-#                         Connect → app → App Information → General → Apple ID).
-#                         Required for non-interactive submit.
-#   ASC_KEY_ID          — App Store Connect API key ID (10-char string)
-#   ASC_ISSUER_ID       — Issuer ID (UUID on the API keys page)
-#   ASC_KEY_CONTENT     — base64-encoded .p8 key: base64 -i AuthKey_XXX.p8
+# Required GitHub secret:
+#   EXPO_TOKEN  — expo.dev → Account Settings → Access Tokens
 #
-# The ASC API key authenticates submission on its own — no Apple ID needed.
+# Submission credentials: the App Store Connect API key is stored on EAS
+# servers (set up once with `eas credentials -p ios`, or saved during a first
+# interactive `eas submit`). EAS Submit uses it automatically in CI, so no ASC
+# secrets or key files are needed here. eas.json only carries the public
+# `ascAppId` (required for non-interactive submit).
 #
 # One-time local prerequisites (run before first CI push):
-#   cd mobile && eas credentials   # sets up EAS-managed iOS dist cert + profile
+#   cd mobile && eas credentials   # EAS-managed iOS dist cert + profile
+#   cd mobile && eas credentials   # + App Store Connect API key for submission
 #   Create the app record on App Store Connect if it doesn't exist yet.
 name: iOS TestFlight
 
@@ -55,26 +54,14 @@ jobs:
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      - name: Write ASC API key
-        run: echo "$ASC_KEY_CONTENT" | base64 -d > /tmp/asc-key.p8
-        env:
-          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
       - name: Build
         id: build
         working-directory: mobile
         run: |
           build_json=$(eas build --platform ios --profile production --non-interactive --json)
           echo "build-id=$(echo "$build_json" | jq -r '.[0].id')" >> "$GITHUB_OUTPUT"
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_PATH: /tmp/asc-key.p8
       - name: Submit to TestFlight
         working-directory: mobile
         run: eas submit --platform ios --profile production --non-interactive --id "$BUILD_ID"
         env:
           BUILD_ID: ${{ steps.build.outputs.build-id }}
-          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-          ASC_KEY_PATH: /tmp/asc-key.p8
