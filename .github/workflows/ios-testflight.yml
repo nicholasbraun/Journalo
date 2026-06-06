@@ -51,9 +51,16 @@ jobs:
         run: echo "$ASC_KEY_CONTENT" | base64 -d > /tmp/asc-key.p8
         env:
           ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
-      - name: Build and submit
+      - name: Build
         working-directory: mobile
-        run: eas build --platform ios --profile production --non-interactive --auto-submit
+        run: eas build --platform ios --profile production --non-interactive
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_PATH: /tmp/asc-key.p8
+      - name: Submit to TestFlight
+        working-directory: mobile
+        run: eas submit --platform ios --profile production --non-interactive --latest --apple-id "$APPLE_ID"
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
