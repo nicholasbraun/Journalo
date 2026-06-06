@@ -53,10 +53,16 @@ function formatDateLabel(date: LoggingDate): string {
 
 // Unique-per-event id without a dependency: a monotonic counter paired with the wall
 // clock. Sufficient under the single-device, single-process model — it satisfies both the
-// fold's (ts, event_id) tie-breaker and the store's UNIQUE column. (expo-crypto UUIDs
-// would be the move if events were ever generated concurrently across devices.)
+// fold's (ts, event_id) tie-breaker and the store's UNIQUE column. The fold compares
+// event_id *lexicographically* (fold.ts `isAfter`), so the counter is zero-padded: without
+// it "…-9" would sort after "…-10" and a same-millisecond tie would resolve against
+// creation order. Six digits covers far more than a single millisecond's writes; an
+// overflow only ever breaks the tie-break for two events in the very same ms, never
+// uniqueness. (expo-crypto UUIDs would be the move if events were ever generated
+// concurrently across devices.)
 let eventSeq = 0;
-const nextEventId = (): EventId => `${Date.now()}-${eventSeq++}` as EventId;
+const nextEventId = (): EventId =>
+  `${Date.now()}-${String(eventSeq++).padStart(6, '0')}` as EventId;
 
 // Topic ids follow the same single-process, monotonic scheme as event ids: they only need
 // to be unique within this device's log. Prefixed so they read distinctly from event ids
