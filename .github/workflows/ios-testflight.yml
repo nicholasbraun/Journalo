@@ -3,10 +3,11 @@
 #
 # Required GitHub secrets:
 #   EXPO_TOKEN          — expo.dev → Account Settings → Access Tokens
-#   APPLE_ID            — your Apple ID email
 #   ASC_KEY_ID          — App Store Connect API key ID (10-char string)
 #   ASC_ISSUER_ID       — Issuer ID (UUID on the API keys page)
 #   ASC_KEY_CONTENT     — base64-encoded .p8 key: base64 -i AuthKey_XXX.p8
+#
+# The ASC API key authenticates submission on its own — no Apple ID needed.
 #
 # One-time local prerequisites (run before first CI push):
 #   cd mobile && eas credentials   # sets up EAS-managed iOS dist cert + profile
@@ -63,10 +64,9 @@ jobs:
           ASC_KEY_PATH: /tmp/asc-key.p8
       - name: Submit to TestFlight
         working-directory: mobile
-        run: eas submit --platform ios --profile production --non-interactive --id "$BUILD_ID" --apple-id "$APPLE_ID"
+        run: eas submit --platform ios --profile production --non-interactive --id "$BUILD_ID"
         env:
           BUILD_ID: ${{ steps.build.outputs.build-id }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_PATH: /tmp/asc-key.p8
