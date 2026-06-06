@@ -3,6 +3,9 @@
 #
 # Required GitHub secrets:
 #   EXPO_TOKEN          — expo.dev → Account Settings → Access Tokens
+#   ASC_APP_ID          — App Store Connect app's numeric Apple ID (App Store
+#                         Connect → app → App Information → General → Apple ID).
+#                         Required for non-interactive submit.
 #   ASC_KEY_ID          — App Store Connect API key ID (10-char string)
 #   ASC_ISSUER_ID       — Issuer ID (UUID on the API keys page)
 #   ASC_KEY_CONTENT     — base64-encoded .p8 key: base64 -i AuthKey_XXX.p8
@@ -67,6 +70,7 @@ jobs:
         run: eas submit --platform ios --profile production --non-interactive --id "$BUILD_ID"
         env:
           BUILD_ID: ${{ steps.build.outputs.build-id }}
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_PATH: /tmp/asc-key.p8
