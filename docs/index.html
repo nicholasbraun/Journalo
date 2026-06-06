@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Journalo — Track what matters. See the year at a glance.</title>
+    <meta
+      name="description"
+      content="Journalo is a private, offline personal tracker. Define your own topics, log them in seconds each day, and watch the year fill in as a color heatmap to spot your patterns. Local-only — no accounts, no sync, no tracking."
+    />
+    <link rel="icon" href="assets/favicon.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <meta property="og:title" content="Journalo" />
+    <meta
+      property="og:description"
+      content="A private, offline personal tracker. Your data stays on your device."
+    />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <!-- Top nav -->
+    <nav class="nav">
+      <div class="wrap">
+        <a class="brand" href="index.html">
+          <img src="assets/icon.png" alt="Journalo app icon" />
+          Journalo
+        </a>
+        <span class="spacer"></span>
+        <span class="links">
+          <a href="#how">How it works</a>
+          <a href="#why">Why Journalo</a>
+          <a href="#screens">Screenshots</a>
+        </span>
+      </div>
+    </nav>
+
+    <!-- Hero -->
+    <header class="hero">
+      <div class="wrap">
+        <img class="app-icon" src="assets/icon.png" alt="Journalo app icon" />
+        <h1>Journalo</h1>
+        <p class="tagline">Track what matters. See the year at a glance.</p>
+        <p class="subhead">
+          A private daily tracker for the things you care about — sleep, mood,
+          symptoms, habits, anything. Define your own topics, log them in
+          seconds, and watch the year fill in as a color heatmap that reveals
+          your patterns.
+        </p>
+        <div class="cta-row">
+          <span class="badge primary" aria-disabled="true">Coming soon to the App Store</span>
+          <a class="badge ghost" href="#how">See how it works</a>
+        </div>
+        <p style="margin-top: 22px">
+          <span class="pill">🔒 Local-only</span>
+          <span class="pill">✈️ Works offline</span>
+          <span class="pill">🙅 No accounts</span>
+        </p>
+
+        <!-- Decorative year-heatmap strip in the app's topic-palette hues. -->
+        <div class="heatstrip" aria-hidden="true" id="heatstrip"></div>
+      </div>
+    </header>
+
+    <!-- How it works -->
+    <section id="how">
+      <div class="wrap">
+        <div class="center">
+          <p class="eyebrow">How it works</p>
+          <h2>Three taps a day. A year of insight.</h2>
+          <p class="lede">
+            No streaks to defend, no scores to chase — just an honest record of
+            your days and a clear way to see them.
+          </p>
+        </div>
+
+        <div class="steps">
+          <article class="step">
+            <div class="step-body">
+              <span class="num">1</span>
+              <h3>Log your day in seconds</h3>
+              <p>
+                Define the topics you care about — each with a scale that fits,
+                from a simple yes/no to five levels like “low → great.” Then one
+                scrollable screen lists them all; tap to record the day. Nothing
+                is filled in for you, so a day you skip simply stays blank. A
+                daily reminder nudges you at a time you choose.
+              </p>
+            </div>
+            <div class="step-art">
+              <div class="phone">
+                <img
+                  src="assets/screenshots/quicklog.png"
+                  alt="Journalo Quick-Log screen listing topics with value selectors"
+                  onerror="this.outerHTML='&lt;div class=&quot;shot-fallback&quot;&gt;Quick-Log screenshot&lt;/div&gt;'"
+                />
+              </div>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-body">
+              <span class="num">2</span>
+              <h3>See the year as a heatmap</h3>
+              <p>
+                Each day becomes a colored cell in a year grid; darker means
+                higher, grey means a day you didn’t log. Seasonal rhythms and
+                rough patches jump out at a glance — a whole year on one screen.
+              </p>
+            </div>
+            <div class="step-art">
+              <div class="phone">
+                <img
+                  src="assets/screenshots/year.png"
+                  alt="Journalo year heatmap showing a topic across twelve months"
+                  onerror="this.outerHTML='&lt;div class=&quot;shot-fallback&quot;&gt;Year heatmap screenshot&lt;/div&gt;'"
+                />
+              </div>
+            </div>
+          </article>
+
+          <article class="step">
+            <div class="step-body">
+              <span class="num">3</span>
+              <h3>Overlay topics to spot patterns</h3>
+              <p>
+                Pick a second topic and the grid splits each day in two, side by
+                side. Eyeball whether mood tracks sleep, or headaches follow a
+                rough week — visual and honest, without inventing false
+                statistical precision from thin, self-reported data.
+              </p>
+            </div>
+            <div class="step-art">
+              <div class="phone">
+                <img
+                  src="assets/screenshots/overlay.png"
+                  alt="Journalo overlay view comparing two topics on the same grid"
+                  onerror="this.outerHTML='&lt;div class=&quot;shot-fallback&quot;&gt;Overlay / compare screenshot&lt;/div&gt;'"
+                />
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Why Journalo -->
+    <section id="why">
+      <div class="wrap">
+        <div class="center">
+          <p class="eyebrow">Why Journalo</p>
+          <h2>Built to respect your data and your attention.</h2>
+        </div>
+
+        <div class="cards">
+          <article class="glass card">
+            <div class="ico">🔒</div>
+            <h3>Local-only by design</h3>
+            <p>
+              Everything lives on your device. No server, no cloud, no account
+              to create. Your records are yours.
+            </p>
+          </article>
+
+          <article class="glass card">
+            <div class="ico">✈️</div>
+            <h3>Fully offline</h3>
+            <p>
+              Journalo never needs the network. It works on a plane, in a tunnel,
+              anywhere — because nothing leaves your phone.
+            </p>
+          </article>
+
+          <article class="glass card">
+            <div class="ico">🙈</div>
+            <h3>No tracking, ever</h3>
+            <p>
+              No analytics, no ads, no third-party SDKs phoning home. There’s
+              simply nothing collecting data about you.
+            </p>
+          </article>
+
+          <article class="glass card">
+            <div class="ico">🎯</div>
+            <h3>Honest data</h3>
+            <p>
+              A blank day is genuinely blank — never quietly counted as zero. The
+              app keeps “not logged” and a real low value strictly apart.
+            </p>
+          </article>
+
+          <article class="glass card">
+            <div class="ico">↩️</div>
+            <h3>Nothing is lost</h3>
+            <p>
+              Made a mistake? Go back and fix any past day, anytime. Your record
+              stays complete.
+            </p>
+          </article>
+
+          <article class="glass card">
+            <div class="ico">💸</div>
+            <h3>One-time purchase</h3>
+            <p>
+              Buy it once. No subscription, no upsells, no in-app purchases —
+              just the app.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screenshot gallery -->
+    <section id="screens">
+      <div class="wrap">
+        <div class="center">
+          <p class="eyebrow">A closer look</p>
+          <h2>Calm, fast, and yours.</h2>
+        </div>
+
+        <div class="gallery">
+          <figure>
+            <div class="phone">
+              <img
+                src="assets/screenshots/quicklog.png"
+                alt="Quick-Log screen"
+                onerror="this.outerHTML='&lt;div class=&quot;shot-fallback&quot;&gt;Quick-Log&lt;/div&gt;'"
+              />
+            </div>
+            <figcaption>Quick-Log — your whole day in one screen</figcaption>
+          </figure>
+          <figure>
+            <div class="phone">
+              <img
+                src="assets/screenshots/year.png"
+                alt="Year heatmap"
+                onerror="this.outerHTML='&lt;div class=&quot;shot-fallback&quot;&gt;Year heatmap&lt;/div&gt;'"
+              />
+            </div>
+            <figcaption>Year heatmap — twelve months at a glance</figcaption>
+          </figure>
+          <figure>
+            <div class="phone">
+              <img
+                src="assets/screenshots/overlay.png"
+                alt="Overlay / compare view"
+                onerror="this.outerHTML='&lt;div class=&quot;shot-fallback&quot;&gt;Overlay&lt;/div&gt;'"
+              />
+            </div>
+            <figcaption>Overlay — compare topics side by side</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="wrap">
+        <span class="brand">
+          <img src="assets/icon.png" alt="" />
+          Journalo
+        </span>
+        <span class="spacer"></span>
+        <span class="legal-links">
+          <a href="impressum.html">Impressum</a>
+          <a href="datenschutz.html">Datenschutz</a>
+        </span>
+        <small>
+          © 2026 Nicholas Braun. Licensed under the PolyForm Noncommercial
+          License 1.0.0.
+        </small>
+      </div>
+    </footer>
+
+    <script>
+      // Paint the decorative hero heatstrip with the app's topic-palette hues,
+      // mixed toward white at varying intensities — a nod to the in-app color ramp.
+      (function () {
+        var palette = [
+          "#FF453A", "#FF9F0A", "#FFCC00", "#34C759", "#30D0B6",
+          "#32ADE6", "#0A84FF", "#BF5AF2", "#FF375F",
+        ];
+        var strip = document.getElementById("heatstrip");
+        if (!strip) return;
+        var cells = 84;
+        var html = "";
+        for (var i = 0; i < cells; i++) {
+          // Deterministic pseudo-pattern (no randomness needed): cycle hues,
+          // vary alpha so it reads like real logged intensity over a year.
+          var hue = palette[(i * 3) % palette.length];
+          var alpha = 0.18 + ((i * 7) % 10) / 12;
+          var color = (i % 9 === 0) ? "rgba(110,116,134,0.13)" : hueToRgba(hue, alpha);
+          html += '<i style="--c:' + color + '"></i>';
+        }
+        strip.innerHTML = html;
+
+        function hueToRgba(hex, a) {
+          var n = parseInt(hex.slice(1), 16);
+          return (
+            "rgba(" + ((n >> 16) & 255) + "," + ((n >> 8) & 255) + "," + (n & 255) +
+            "," + a.toFixed(2) + ")"
+          );
+        }
+      })();
+    </script>
+  </body>
+</html>

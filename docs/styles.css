@@ -1,0 +1,490 @@
+/* Journalo landing site — "Liquid Glass" styling.
+   Tokens mirror the app's design system (mobile/src/ui/theme.ts + palette.ts):
+   translucent white glass surfaces floating over an Apple-style gradient mesh. */
+
+:root {
+  /* Labels */
+  --ink: #15171c;
+  --label2: rgba(60, 60, 67, 0.62);
+  --label3: rgba(60, 60, 67, 0.34);
+
+  /* Glass material */
+  --glass-fill: rgba(255, 255, 255, 0.5);
+  --glass-fill-strong: rgba(255, 255, 255, 0.66);
+  --glass-hi: rgba(255, 255, 255, 0.85);
+  --glass-edge: rgba(255, 255, 255, 0.55);
+
+  /* Accent + base */
+  --accent: #5e5ce6;
+  --paper: #eef2fb;
+
+  /* Radii (rCard / rControl / rChip) */
+  --r-card: 28px;
+  --r-control: 18px;
+  --r-chip: 999px;
+
+  --maxw: 1080px;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+
+  /* Apple-style gradient mesh: pale cool base + soft color blobs.
+     Fixed so it stays put as the page scrolls (the glass refracts a steady field). */
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(40% 50% at 12% 8%, rgba(150, 168, 255, 0.55), transparent 70%),
+    radial-gradient(38% 46% at 88% 14%, rgba(120, 214, 245, 0.5), transparent 70%),
+    radial-gradient(46% 50% at 18% 95%, rgba(150, 240, 205, 0.42), transparent 70%),
+    radial-gradient(44% 52% at 92% 92%, rgba(190, 168, 255, 0.45), transparent 70%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  min-height: 100vh;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* ---- Layout helpers --------------------------------------------------- */
+
+.wrap {
+  width: 100%;
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+section {
+  padding: 72px 0;
+}
+
+h1,
+h2,
+h3 {
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0 0 0.4em;
+}
+
+h2 {
+  font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+}
+
+.lede {
+  color: var(--label2);
+  font-size: 1.15rem;
+  max-width: 46ch;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin: 0 0 12px;
+}
+
+.center {
+  text-align: center;
+}
+.center .lede {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---- Glass surface ---------------------------------------------------- */
+
+.glass {
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-card);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-hi),
+    0 12px 40px -12px rgba(21, 23, 28, 0.18);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+
+/* ---- Top nav ---------------------------------------------------------- */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--glass-fill-strong);
+  border-bottom: 1px solid var(--glass-edge);
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+.nav .wrap {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.nav .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+.nav .brand img {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+.nav .spacer {
+  flex: 1;
+}
+.nav .links a {
+  color: var(--label2);
+  font-weight: 500;
+  font-size: 0.95rem;
+  margin-left: 22px;
+}
+.nav .links a:hover {
+  color: var(--ink);
+  text-decoration: none;
+}
+
+/* ---- Hero ------------------------------------------------------------- */
+
+.hero {
+  padding-top: 84px;
+  padding-bottom: 40px;
+  text-align: center;
+}
+.hero .app-icon {
+  width: 104px;
+  height: 104px;
+  border-radius: 24px;
+  margin: 0 auto 28px;
+  box-shadow: 0 18px 48px -12px rgba(94, 92, 230, 0.45);
+}
+.hero h1 {
+  font-size: clamp(2.4rem, 6vw, 4rem);
+}
+.hero .tagline {
+  font-size: clamp(1.15rem, 2.6vw, 1.5rem);
+  color: var(--label2);
+  max-width: 30ch;
+  margin: 0 auto 8px;
+}
+.hero .subhead {
+  color: var(--label3);
+  max-width: 52ch;
+  margin: 18px auto 0;
+}
+
+.cta-row {
+  margin-top: 32px;
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border-radius: var(--r-chip);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.badge.primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 10px 30px -8px rgba(94, 92, 230, 0.6);
+}
+.badge.primary[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: default;
+  box-shadow: none;
+}
+.badge.ghost {
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-edge);
+  color: var(--ink);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: var(--r-chip);
+  background: var(--glass-fill);
+  border: 1px solid var(--glass-edge);
+  color: var(--label2);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+/* Decorative year-heatmap strip under the hero (topic palette hues). */
+.heatstrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(14px, 1fr));
+  gap: 5px;
+  max-width: 760px;
+  margin: 44px auto 0;
+}
+.heatstrip i {
+  aspect-ratio: 1;
+  border-radius: var(--r-cell, 7px);
+  background: var(--c, var(--glass-fill));
+}
+
+/* ---- Phone frame (CSS device bezel around real screenshots) ----------- */
+
+.phone {
+  position: relative;
+  width: 260px;
+  border-radius: 42px;
+  padding: 10px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.35));
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-hi),
+    0 24px 60px -18px rgba(21, 23, 28, 0.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.phone img {
+  width: 100%;
+  border-radius: 32px;
+  display: block;
+}
+/* Placeholder shown until a real screenshot is dropped in. */
+.phone .shot-fallback {
+  aspect-ratio: 9 / 19.5;
+  border-radius: 32px;
+  background: var(--paper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--label3);
+  font-size: 0.85rem;
+  padding: 20px;
+}
+
+/* ---- How it works (steps) -------------------------------------------- */
+
+.steps {
+  display: grid;
+  gap: 56px;
+  margin-top: 48px;
+}
+.step {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 40px;
+  align-items: center;
+}
+.step:nth-child(even) {
+  grid-template-columns: 260px 1fr;
+}
+.step:nth-child(even) .step-art {
+  order: -1;
+}
+.step .num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-chip);
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  margin-bottom: 14px;
+}
+.step h3 {
+  font-size: 1.5rem;
+}
+.step p {
+  color: var(--label2);
+  max-width: 42ch;
+}
+.step-art {
+  display: flex;
+  justify-content: center;
+}
+
+/* ---- Principles / benefit cards -------------------------------------- */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+  margin-top: 40px;
+}
+.card {
+  padding: 26px;
+}
+.card .ico {
+  font-size: 1.6rem;
+  margin-bottom: 12px;
+}
+.card h3 {
+  font-size: 1.15rem;
+}
+.card p {
+  color: var(--label2);
+  margin: 0;
+  font-size: 0.96rem;
+}
+
+/* ---- Screenshot gallery ---------------------------------------------- */
+
+.gallery {
+  display: flex;
+  gap: 28px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 44px;
+}
+.gallery figure {
+  margin: 0;
+  text-align: center;
+}
+.gallery figcaption {
+  margin-top: 14px;
+  color: var(--label2);
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+/* ---- Footer ----------------------------------------------------------- */
+
+.footer {
+  margin-top: 40px;
+  border-top: 1px solid var(--glass-edge);
+  background: var(--glass-fill-strong);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.footer .wrap {
+  padding-top: 40px;
+  padding-bottom: 48px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 32px;
+  align-items: center;
+}
+.footer .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+.footer .brand img {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+.footer .spacer {
+  flex: 1;
+}
+.footer a {
+  color: var(--label2);
+  margin-left: 0;
+}
+.footer .legal-links a {
+  margin-left: 22px;
+}
+.footer small {
+  color: var(--label3);
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* ---- Legal (Impressum / Datenschutz) reading pages -------------------- */
+
+.legal {
+  max-width: 760px;
+  margin: 40px auto;
+  padding: 44px clamp(24px, 5vw, 56px);
+}
+.legal h1 {
+  font-size: 2rem;
+}
+.legal h2 {
+  font-size: 1.25rem;
+  margin-top: 2em;
+}
+.legal p,
+.legal li {
+  color: var(--label2);
+}
+.legal .back {
+  display: inline-block;
+  margin-bottom: 24px;
+  font-weight: 500;
+}
+.legal .ph {
+  background: rgba(94, 92, 230, 0.12);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-weight: 600;
+  color: var(--accent);
+  font-style: normal;
+}
+
+/* ---- Responsive ------------------------------------------------------- */
+
+@media (max-width: 720px) {
+  section {
+    padding: 52px 0;
+  }
+  .nav .links a {
+    margin-left: 16px;
+  }
+  .step,
+  .step:nth-child(even) {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .step:nth-child(even) .step-art,
+  .step .step-art {
+    order: 0;
+  }
+  .step p {
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
