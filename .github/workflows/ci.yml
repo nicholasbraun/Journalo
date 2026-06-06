@@ -1,0 +1,25 @@
+# Runs the two guards CLAUDE.md calls "the two guards that keep the architecture
+# honest" (typecheck + lint:deps) plus the core test suite on every push and PR, so
+# a boundary or type violation is caught in CI rather than relying on each developer
+# remembering to run them locally.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Expo SDK 56 requires Node >= 20.19.4.
+          node-version: 20.20.0
+          cache: npm
+      - run: npm ci
+      - run: npm run lint:deps
+      - run: npm run typecheck
+      - run: npm test
