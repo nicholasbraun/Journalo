@@ -94,10 +94,18 @@ export function YearScreen({ state }: Props) {
   // string, NOT the `topics` array (activeTopics returns a fresh array each render).
   const topicIdsKey = topics.map((t) => t.id).join(' ');
   useEffect(() => {
+    const available = topicIdsKey ? topicIdsKey.split(' ') : [];
     setSelectedIds((ids) => {
-      const kept = ids.filter((id) => topicIdsKey.split(' ').includes(id));
-      if (kept.length === ids.length) return ids;
-      return kept.length ? kept : topicIdsKey ? [topicIdsKey.split(' ')[0] as TopicId] : [];
+      const kept = ids.filter((id) => available.includes(id));
+      // Desired selection: keep the surviving picks if any, else seed the first available
+      // topic, else empty when no topics exist. Seeding the first topic covers the
+      // 0→first-topic transition — this screen mounts eagerly under the native tab bar, so
+      // it initializes with an empty selection BEFORE any topic exists, and that case must
+      // recover once one is created. (The old `kept.length === ids.length` short-circuit
+      // returned the empty selection here, leaving the year view stuck on its empty state.)
+      const next = kept.length ? kept : available.length ? [available[0] as TopicId] : [];
+      // Preserve the array reference when nothing changed, to avoid a needless re-render.
+      return next.length === ids.length && next.every((id, i) => id === ids[i]) ? ids : next;
     });
   }, [topicIdsKey]);
 
