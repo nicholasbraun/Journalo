@@ -1,6 +1,10 @@
 # Builds the iOS app via EAS Build (production profile) and submits it to
 # TestFlight via EAS Submit on every push to main. PRs are handled by ci.yml.
 #
+# If only the submit step fails, do NOT re-run this workflow (that rebuilds
+# and spends another EAS build). Run ios-submit.yml instead to submit the
+# already-finished build.
+#
 # Required GitHub secrets:
 #   EXPO_TOKEN          — expo.dev → Account Settings → Access Tokens
 #   ASC_APP_ID          — App Store Connect app's numeric Apple ID (App Store

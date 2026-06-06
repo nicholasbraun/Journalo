@@ -1,0 +1,58 @@
+# Submits an ALREADY-BUILT EAS build to TestFlight without rebuilding.
+#
+# Why this exists: ios-testflight.yml does build + submit in one job on push,
+# so a submit-only failure there can't be retried without spending another
+# EAS build. Run this workflow instead to submit an existing artifact — zero
+# build credits consumed.
+#
+# Trigger manually: Actions tab → "iOS Submit (existing build)" → Run workflow.
+#   build_id — an EAS build ID (from the build URL or `eas build:list`).
+#              Leave blank to submit the latest finished iOS production build.
+#
+# Uses the same secrets as ios-testflight.yml:
+#   EXPO_TOKEN, ASC_APP_ID, ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_CONTENT
+name: iOS Submit (existing build)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "EAS build ID to submit (blank = latest finished iOS production build)"
+        required: false
+        type: string
+
+jobs:
+  submit:
+    name: Submit to TestFlight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.0
+          cache: npm
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Write ASC API key
+        run: echo "$ASC_KEY_CONTENT" | base64 -d > /tmp/asc-key.p8
+        env:
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+      - name: Submit to TestFlight
+        working-directory: mobile
+        # --id submits the given build; with no id we fall back to --latest so
+        # the workflow is usable even when you don't have the id handy.
+        run: |
+          if [ -n "$BUILD_ID" ]; then
+            eas submit --platform ios --profile production --non-interactive --id "$BUILD_ID"
+          else
+            eas submit --platform ios --profile production --non-interactive --latest
+          fi
+        env:
+          BUILD_ID: ${{ inputs.build_id }}
+          ASC_APP_ID: ${{ secrets.ASC_APP_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_PATH: /tmp/asc-key.p8
