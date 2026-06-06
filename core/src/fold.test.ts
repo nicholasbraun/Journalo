@@ -189,4 +189,14 @@ describe("fold", () => {
     expect(active).toContain(tid("mood"));
     expect(active).not.toContain(tid("ibs"));
   });
+
+  // Finalization only surfaces topics that have a TopicCreated; an edit or delete for an
+  // id that was never created is retained in the log but stays inert (no phantom topic).
+  // Pin it so a future refactor of the finalization pass can't silently start materializing
+  // half-formed topics out of stray events.
+  it("ignores edits and deletes for topics that were never created", () => {
+    const s = fold([edit("ghost", 1, { name: "Ghost" }), del("ghost", 2)]);
+    expect(s.topics.size).toBe(0);
+    expect(s.topics.get(tid("ghost"))).toBeUndefined();
+  });
 });
