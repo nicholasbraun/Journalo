@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, StyleSheet, View } from 'react-native';
 
 import {
   fold,
@@ -98,12 +98,23 @@ export function JournalProvider({ children }: { children: ReactNode }) {
   // decides which calendar day a value lands on (ARCHITECTURE.md §5, CLAUDE.md invariant 3).
   const { boundary } = useSettings();
 
-  // Today's logging day under the current boundary. Recomputed when the boundary changes so
-  // the "today" new values are stamped with tracks the live setting — this is the *future*
-  // half of freeze semantics. The *past* half needs nothing here: each stored event keeps its
-  // own frozen logging_date, and the fold reads that, never recomputing from the boundary, so
-  // changing this value never moves a value already recorded.
-  const today = useMemo(() => loggingDateFor(wallClockNow(), boundary), [boundary]);
+  // Today's logging day under the current boundary, held in state rather than a bare memo
+  // because wall-clock time advances while the provider stays mounted. A mobile JS process
+  // routinely survives in the background across a logging-day boundary, so a value derived
+  // only from `boundary` would go stale and make screens show the wrong day. We refresh it
+  // when the boundary changes and whenever the app returns to the foreground. (Writes don't
+  // rely on this staying perfectly fresh — setValue re-derives the date at tap time below.)
+  // This is the *future* half of freeze semantics; the *past* half needs nothing here, since
+  // each stored event keeps its own frozen logging_date that the fold reads verbatim.
+  const [today, setToday] = useState<LoggingDate>(() => loggingDateFor(wallClockNow(), boundary));
+  useEffect(() => {
+    const refresh = () => setToday(loggingDateFor(wallClockNow(), boundary));
+    refresh();
+    const sub = AppState.addEventListener('change', (status) => {
+      if (status === 'active') refresh();
+    });
+    return () => sub.remove();
+  }, [boundary]);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,17 +140,31 @@ export function JournalProvider({ children }: { children: ReactNode }) {
 
     // Write through to the store AND append to the in-memory log, then let the fold
     // re-derive — no DB round-trip per render, and no parallel mutable state to drift.
+    // The optimistic in-memory append happens first so the UI updates immediately; if the
+    // store write then rejects (disk full, the event_id UNIQUE guard, a locked db) we roll
+    // the event back out of the log. Without that, memory and disk silently diverge and the
+    // value vanishes on the next launch with no signal — worse than a visible failure.
+    const persist = (event: Event) => {
+      setEvents((prev) => [...(prev ?? []), event]);
+      store.append([event]).catch((err: unknown) => {
+        console.warn('journal: failed to persist event, rolling back', err);
+        setEvents((prev) => prev?.filter((e) => e.event_id !== event.event_id) ?? null);
+      });
+    };
+
     const setValue = (topicId: TopicId, rank: Rank) => {
       const event: Event = {
         type: 'DayValueSet',
         event_id: nextEventId(),
         ts: Date.now(),
         topic_id: topicId,
-        logging_date: today,
+        // Re-derive the logging day at the moment of the tap rather than reusing the
+        // memoized `today`: an app left foregrounded across the boundary would otherwise
+        // stamp the value with the previous day. This is the authoritative write date.
+        logging_date: loggingDateFor(wallClockNow(), boundary),
         rank,
       };
-      void store.append([event]);
-      setEvents((prev) => [...(prev ?? []), event]);
+      persist(event);
     };
 
     const createTopic = (input: { name: string; color: string; scale: Scale }) => {
@@ -152,12 +177,11 @@ export function JournalProvider({ children }: { children: ReactNode }) {
         color: input.color,
         scale: input.scale,
       };
-      void store.append([event]);
-      setEvents((prev) => [...(prev ?? []), event]);
+      persist(event);
     };
 
     return { state, loggingDate: today, dateLabel: formatDateLabel(today), setValue, createTopic };
-  }, [events, store, state, today]);
+  }, [events, store, state, today, boundary]);
 
   // Gate the routes on the initial load, exactly as the old App did before showing a screen.
   // Rendering the navigator only once data is ready is the standard splash-until-loaded
