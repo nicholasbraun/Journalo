@@ -16,6 +16,13 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "$APPLE_ID",
+        "ascApiKeyId": "$ASC_KEY_ID",
+        "ascApiKeyIssuerId": "$ASC_ISSUER_ID",
+        "ascApiKeyPath": "$ASC_KEY_PATH"
+      }
+    }
   }
 }

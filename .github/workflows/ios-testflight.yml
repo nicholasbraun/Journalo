@@ -1,0 +1,61 @@
+# Builds the iOS app via EAS Build (production profile) and submits it to
+# TestFlight via EAS Submit on every push to main. PRs are handled by ci.yml.
+#
+# Required GitHub secrets:
+#   EXPO_TOKEN          — expo.dev → Account Settings → Access Tokens
+#   APPLE_ID            — your Apple ID email
+#   ASC_KEY_ID          — App Store Connect API key ID (10-char string)
+#   ASC_ISSUER_ID       — Issuer ID (UUID on the API keys page)
+#   ASC_KEY_CONTENT     — base64-encoded .p8 key: base64 -i AuthKey_XXX.p8
+#
+# One-time local prerequisites (run before first CI push):
+#   cd mobile && eas credentials   # sets up EAS-managed iOS dist cert + profile
+#   Create the app record on App Store Connect if it doesn't exist yet.
+name: iOS TestFlight
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  guards:
+    name: Guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.0
+          cache: npm
+      - run: npm ci
+      - run: npm run lint:deps
+      - run: npm run typecheck
+      - run: npm test
+
+  build-and-submit:
+    name: Build & submit to TestFlight
+    needs: guards
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.0
+          cache: npm
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Write ASC API key
+        run: echo "$ASC_KEY_CONTENT" | base64 -d > /tmp/asc-key.p8
+        env:
+          ASC_KEY_CONTENT: ${{ secrets.ASC_KEY_CONTENT }}
+      - name: Build and submit
+        working-directory: mobile
+        run: eas build --platform ios --profile production --non-interactive --auto-submit
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_PATH: /tmp/asc-key.p8
